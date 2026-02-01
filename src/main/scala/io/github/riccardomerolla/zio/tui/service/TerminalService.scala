@@ -302,18 +302,38 @@ object TerminalService:
   def println(text: String): ZIO[TerminalService, TUIError, Unit] =
     ZIO.serviceWithZIO[TerminalService](_.println(text))
 
-  /** Live ZLayer for TerminalService with default configuration.
+  /** Live ZLayer for TerminalService with default configuration and automatic resource management.
     */
   val live: ZLayer[Any, Nothing, TerminalService] =
-    ZLayer.succeed(TerminalServiceLive(TerminalConfig.default))
+    ZLayer.scoped {
+      for
+        terminal <- ZIO.acquireRelease(
+          acquire = ZIO.attempt(
+            org.jline.terminal.TerminalBuilder.terminal()
+          ).orDie
+        )(release = terminal =>
+          ZIO.succeed(terminal.close())
+        )
+      yield TerminalServiceLive(TerminalConfig.default, terminal)
+    }
 
-  /** Live ZLayer for TerminalService with custom configuration.
+  /** Live ZLayer for TerminalService with custom configuration and automatic resource management.
     *
     * @param config
     *   The terminal configuration
     */
-  def withConfig(config: TerminalConfig): ULayer[TerminalService] =
-    ZLayer.succeed(TerminalServiceLive(config))
+  def withConfig(config: TerminalConfig): ZLayer[Any, Nothing, TerminalService] =
+    ZLayer.scoped {
+      for
+        terminal <- ZIO.acquireRelease(
+          acquire = ZIO.attempt(
+            org.jline.terminal.TerminalBuilder.terminal()
+          ).orDie
+        )(release = terminal =>
+          ZIO.succeed(terminal.close())
+        )
+      yield TerminalServiceLive(config, terminal)
+    }
 
   /** Test/mock implementation returning predefined results.
     *
