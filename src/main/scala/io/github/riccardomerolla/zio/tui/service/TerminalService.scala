@@ -60,7 +60,7 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
     }
   
   override def renderAll(widgets: Seq[Widget]): IO[TUIError, Seq[RenderResult]] =
-    ZIO.foreachPar(widgets)(render)
+    ZIO.foreach(widgets)(render)
   
   override def clear: IO[TUIError, Unit] =
     ZIO.attempt {

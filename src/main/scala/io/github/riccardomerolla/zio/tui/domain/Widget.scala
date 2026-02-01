@@ -61,7 +61,7 @@ final case class RenderResult(
 
 object RenderResult:
   def fromString(output: String): RenderResult =
-    val lines = output.linesIterator.size
+    val lines = if (output.isEmpty) 0 else output.count(_ == '\n') + 1
     RenderResult(output, lines, output.length)
 
 /** Configuration for terminal rendering.
