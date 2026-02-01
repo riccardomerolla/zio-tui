@@ -99,4 +99,14 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         rect.height == 15,
       )
     },
+    test("size returns terminal dimensions") {
+      for
+        size <- ZIO.serviceWithZIO[TerminalService](_.size)
+      yield assertTrue(
+        size.width == 80,
+        size.height == 24,
+        size.x == 0,
+        size.y == 0,
+      )
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)

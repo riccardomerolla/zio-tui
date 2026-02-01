@@ -1,8 +1,8 @@
 package io.github.riccardomerolla.zio.tui.service
 
-import zio.{ IO, ULayer, ZIO, ZLayer }
+import zio.{ IO, UIO, ULayer, ZIO, ZLayer }
 
-import io.github.riccardomerolla.zio.tui.domain.{ RenderResult, TerminalConfig, Widget }
+import io.github.riccardomerolla.zio.tui.domain.{ Rect, RenderResult, TerminalConfig, Widget }
 import io.github.riccardomerolla.zio.tui.error.TUIError
 
 /** Service for managing terminal operations in a resource-safe, effect-typed way.
@@ -53,6 +53,13 @@ trait TerminalService:
     */
   def println(text: String): IO[TUIError, Unit]
 
+  /** Get current terminal size.
+    *
+    * @return
+    *   Effect that produces terminal dimensions as a Rect
+    */
+  def size: UIO[Rect]
+
 /** Live implementation of TerminalService using stdout.
   */
 final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
@@ -101,6 +108,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
         cause = throwable.getMessage,
       )
     }
+
+  override def size: UIO[Rect] =
+    ZIO.succeed(Rect.fromSize(config.width, config.height))
 
 object TerminalService:
   /** Access the TerminalService from the environment and render a widget.
@@ -157,4 +167,14 @@ object TerminalService:
         ZIO.unit
 
       override def println(text: String): IO[TUIError, Unit] =
-        ZIO.unit)
+        ZIO.unit
+
+      override def size: UIO[Rect] =
+        ZIO.succeed(Rect.fromSize(80, 24)))
+
+  /** Test/mock implementation returning predefined results.
+    *
+    * Useful for testing without actual terminal I/O.
+    */
+  def test(renderResults: Map[Widget, RenderResult] = Map.empty): ULayer[TerminalService] =
+    mock(renderResults)
