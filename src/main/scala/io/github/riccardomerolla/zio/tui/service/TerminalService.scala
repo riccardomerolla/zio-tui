@@ -108,6 +108,22 @@ trait TerminalService:
     */
   def disableRawMode: IO[TUIError, Unit]
 
+  /** Switch to alternate screen buffer.
+    *
+    * Must be paired with exitAlternateScreen for cleanup.
+    *
+    * @return
+    *   Effect that switches to alternate screen
+    */
+  def enterAlternateScreen: IO[TUIError, Unit]
+
+  /** Return to main screen buffer.
+    *
+    * @return
+    *   Effect that returns to main screen
+    */
+  def exitAlternateScreen: IO[TUIError, Unit]
+
 /** Live implementation of TerminalService using stdout.
   */
 final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
@@ -228,6 +244,30 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
       )
     }
 
+  override def enterAlternateScreen: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // ANSI escape code: ESC[?1049h
+      scala.Console.print("\u001b[?1049h")
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "enterAlternateScreen",
+        cause = throwable.getMessage,
+      )
+    }
+
+  override def exitAlternateScreen: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // ANSI escape code: ESC[?1049l
+      scala.Console.print("\u001b[?1049l")
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "exitAlternateScreen",
+        cause = throwable.getMessage,
+      )
+    }
+
 object TerminalService:
   /** Access the TerminalService from the environment and render a widget.
     *
@@ -304,6 +344,12 @@ object TerminalService:
         ZIO.unit
 
       override def disableRawMode: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def enterAlternateScreen: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def exitAlternateScreen: IO[TUIError, Unit] =
         ZIO.unit)
 
   /** Test/mock implementation returning predefined results.

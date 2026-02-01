@@ -139,4 +139,14 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- ZIO.serviceWithZIO[TerminalService](_.disableRawMode)
       yield assertTrue(true)
     }.provideLayer(TerminalService.test()),
+    test("enterAlternateScreen succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.enterAlternateScreen)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("exitAlternateScreen succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
