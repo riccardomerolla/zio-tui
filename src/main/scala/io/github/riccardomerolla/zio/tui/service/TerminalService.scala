@@ -67,6 +67,31 @@ trait TerminalService:
     */
   def flush: IO[TUIError, Unit]
 
+  /** Position the cursor at specific coordinates.
+    *
+    * @param x
+    *   Column (0-based)
+    * @param y
+    *   Row (0-based)
+    * @return
+    *   Effect that moves the cursor
+    */
+  def setCursor(x: Int, y: Int): IO[TUIError, Unit]
+
+  /** Hide the terminal cursor.
+    *
+    * @return
+    *   Effect that hides the cursor
+    */
+  def hideCursor: IO[TUIError, Unit]
+
+  /** Show the terminal cursor.
+    *
+    * @return
+    *   Effect that shows the cursor
+    */
+  def showCursor: IO[TUIError, Unit]
+
 /** Live implementation of TerminalService using stdout.
   */
 final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
@@ -125,6 +150,42 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "flush",
+        cause = throwable.getMessage,
+      )
+    }
+
+  override def setCursor(x: Int, y: Int): IO[TUIError, Unit] =
+    ZIO.attempt {
+      // ANSI escape code: ESC[{row};{col}H (1-based indexing)
+      scala.Console.print(s"\u001b[${y + 1};${x + 1}H")
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "setCursor",
+        cause = throwable.getMessage,
+      )
+    }
+
+  override def hideCursor: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // ANSI escape code: ESC[?25l
+      scala.Console.print("\u001b[?25l")
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "hideCursor",
+        cause = throwable.getMessage,
+      )
+    }
+
+  override def showCursor: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // ANSI escape code: ESC[?25h
+      scala.Console.print("\u001b[?25h")
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "showCursor",
         cause = throwable.getMessage,
       )
     }
@@ -190,6 +251,15 @@ object TerminalService:
         ZIO.succeed(Rect.fromSize(80, 24))
 
       override def flush: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def setCursor(x: Int, y: Int): IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def hideCursor: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def showCursor: IO[TUIError, Unit] =
         ZIO.unit)
 
   /** Test/mock implementation returning predefined results.

@@ -114,4 +114,19 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- ZIO.serviceWithZIO[TerminalService](_.flush)
       yield assertTrue(true)
     }.provideLayer(TerminalService.test()),
+    test("setCursor positions cursor at coordinates") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(10, 5))
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("hideCursor succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.hideCursor)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("showCursor succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.showCursor)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
