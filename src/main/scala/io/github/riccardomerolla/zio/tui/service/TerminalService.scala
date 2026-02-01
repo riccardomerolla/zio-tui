@@ -302,6 +302,40 @@ object TerminalService:
   def println(text: String): ZIO[TerminalService, TUIError, Unit] =
     ZIO.serviceWithZIO[TerminalService](_.println(text))
 
+  /** Run an effect with raw mode enabled, automatically disabling on completion.
+    *
+    * Raw mode disables line buffering and echo, useful for interactive applications. This method ensures raw mode is
+    * properly disabled even if the effect fails or is interrupted.
+    *
+    * @param effect
+    *   The effect to run in raw mode
+    * @return
+    *   Effect that runs with raw mode enabled and automatically cleaned up
+    */
+  def withRawMode[R, E, A](effect: ZIO[R & TerminalService, E, A]): ZIO[R & TerminalService, E, A] =
+    ZIO.acquireReleaseWith(
+      ZIO.serviceWithZIO[TerminalService](_.enableRawMode).ignore
+    )(_ =>
+      ZIO.serviceWithZIO[TerminalService](_.disableRawMode).ignore
+    )(_ => effect)
+
+  /** Run an effect in alternate screen buffer, automatically restoring on completion.
+    *
+    * The alternate screen buffer provides a clean slate separate from the user's terminal history. This method ensures
+    * the original screen is restored even if the effect fails or is interrupted.
+    *
+    * @param effect
+    *   The effect to run in alternate screen
+    * @return
+    *   Effect that runs in alternate screen and automatically restores main screen
+    */
+  def withAlternateScreen[R, E, A](effect: ZIO[R & TerminalService, E, A]): ZIO[R & TerminalService, E, A] =
+    ZIO.acquireReleaseWith(
+      ZIO.serviceWithZIO[TerminalService](_.enterAlternateScreen).ignore
+    )(_ =>
+      ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen).ignore
+    )(_ => effect)
+
   /** Live ZLayer for TerminalService with default configuration and automatic resource management.
     */
   val live: ZLayer[Any, Nothing, TerminalService] =

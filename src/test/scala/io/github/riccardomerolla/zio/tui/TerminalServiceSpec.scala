@@ -149,4 +149,27 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
       yield assertTrue(true)
     }.provideLayer(TerminalService.test()),
+    test("withRawMode enables and disables raw mode") {
+      for
+        result <- TerminalService.withRawMode {
+          ZIO.succeed("executed in raw mode")
+        }
+      yield assertTrue(result == "executed in raw mode")
+    }.provideLayer(TerminalService.test()),
+    test("withAlternateScreen enters and exits alternate screen") {
+      for
+        result <- TerminalService.withAlternateScreen {
+          ZIO.succeed("executed in alternate screen")
+        }
+      yield assertTrue(result == "executed in alternate screen")
+    }.provideLayer(TerminalService.test()),
+    test("withRawMode and withAlternateScreen compose") {
+      for
+        result <- TerminalService.withRawMode {
+          TerminalService.withAlternateScreen {
+            ZIO.succeed("nested scoped effects")
+          }
+        }
+      yield assertTrue(result == "nested scoped effects")
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
