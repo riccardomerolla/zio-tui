@@ -81,4 +81,22 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- TerminalService.println("Test output")
       yield assertTrue(true)
     },
+    test("Rect represents terminal dimensions") {
+      val rect = Rect.fromSize(80, 24)
+      assertTrue(
+        rect.x == 0,
+        rect.y == 0,
+        rect.width == 80,
+        rect.height == 24,
+      )
+    },
+    test("Rect can be created with position") {
+      val rect = Rect(x = 10, y = 5, width = 60, height = 15)
+      assertTrue(
+        rect.x == 10,
+        rect.y == 5,
+        rect.width == 60,
+        rect.height == 15,
+      )
+    },
   ).provideLayerShared(testLayer)

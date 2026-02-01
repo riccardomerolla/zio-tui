@@ -42,6 +42,9 @@ package object tui:
   type TerminalConfig = domain.TerminalConfig
   val TerminalConfig: io.github.riccardomerolla.zio.tui.domain.TerminalConfig.type = domain.TerminalConfig
 
+  type Rect = domain.Rect
+  val Rect: io.github.riccardomerolla.zio.tui.domain.Rect.type = domain.Rect
+
   type ZCmd[R, E, Msg] = domain.ZCmd[R, E, Msg]
   val ZCmd: domain.ZCmd.type = domain.ZCmd
 

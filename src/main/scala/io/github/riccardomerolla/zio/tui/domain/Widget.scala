@@ -96,3 +96,34 @@ object TerminalConfig:
       height = 24,
       colorEnabled = true,
     )
+
+/** Represents a rectangle in terminal coordinate space.
+  *
+  * @param x
+  *   The column position (0-based, left edge)
+  * @param y
+  *   The row position (0-based, top edge)
+  * @param width
+  *   The width in columns
+  * @param height
+  *   The height in rows
+  */
+final case class Rect(
+  x: Int,
+  y: Int,
+  width: Int,
+  height: Int,
+)
+
+object Rect:
+  /** Create a Rect representing full terminal size starting at origin.
+    *
+    * @param width
+    *   Terminal width in columns
+    * @param height
+    *   Terminal height in rows
+    * @return
+    *   Rect positioned at (0,0) with given dimensions
+    */
+  def fromSize(width: Int, height: Int): Rect =
+    Rect(x = 0, y = 0, width = width, height = height)
