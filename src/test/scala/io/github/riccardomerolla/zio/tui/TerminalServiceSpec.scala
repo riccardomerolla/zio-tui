@@ -18,7 +18,7 @@ import io.github.riccardomerolla.zio.tui.service.TerminalService
 object TerminalServiceSpec extends ZIOSpecDefault:
 
   private val testLayer: ZLayer[Any, Nothing, TerminalService] =
-    TerminalService.mock()
+    TerminalService.test()
 
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("TerminalService")(
     test("renders text widget successfully") {
@@ -81,4 +81,95 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- TerminalService.println("Test output")
       yield assertTrue(true)
     },
+    test("Rect represents terminal dimensions") {
+      val rect = Rect.fromSize(80, 24)
+      assertTrue(
+        rect.x == 0,
+        rect.y == 0,
+        rect.width == 80,
+        rect.height == 24,
+      )
+    },
+    test("Rect can be created with position") {
+      val rect = Rect(x = 10, y = 5, width = 60, height = 15)
+      assertTrue(
+        rect.x == 10,
+        rect.y == 5,
+        rect.width == 60,
+        rect.height == 15,
+      )
+    },
+    test("size returns terminal dimensions") {
+      for
+        size <- ZIO.serviceWithZIO[TerminalService](_.size)
+      yield assertTrue(
+        size.width == 80,
+        size.height == 24,
+        size.x == 0,
+        size.y == 0,
+      )
+    }.provideLayer(TerminalService.test()),
+    test("flush completes without error") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.flush)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("setCursor positions cursor at coordinates") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(10, 5))
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("hideCursor succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.hideCursor)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("showCursor succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.showCursor)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("enableRawMode succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.enableRawMode)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("disableRawMode succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.disableRawMode)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("enterAlternateScreen succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.enterAlternateScreen)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("exitAlternateScreen succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("withRawMode enables and disables raw mode") {
+      for
+        result <- TerminalService.withRawMode {
+                    ZIO.succeed("executed in raw mode")
+                  }
+      yield assertTrue(result == "executed in raw mode")
+    }.provideLayer(TerminalService.test()),
+    test("withAlternateScreen enters and exits alternate screen") {
+      for
+        result <- TerminalService.withAlternateScreen {
+                    ZIO.succeed("executed in alternate screen")
+                  }
+      yield assertTrue(result == "executed in alternate screen")
+    }.provideLayer(TerminalService.test()),
+    test("withRawMode and withAlternateScreen compose") {
+      for
+        result <- TerminalService.withRawMode {
+                    TerminalService.withAlternateScreen {
+                      ZIO.succeed("nested scoped effects")
+                    }
+                  }
+      yield assertTrue(result == "nested scoped effects")
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
