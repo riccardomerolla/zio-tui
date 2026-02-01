@@ -58,11 +58,11 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
       },
       test("executes Fire command with side effects") {
         for
-          ref <- Ref.make(0)
+          ref    <- Ref.make(0)
           runtime = Runtime.default
           cmd     = ZCmd.fire(ref.update(_ + 1))
           _       = LayoutzBridge.convertCmd(cmd, (_: String) => (), runtime)
-          value   <- ref.get
+          value  <- ref.get
         yield assertTrue(value == 1)
       },
       test("executes Batch command sequentially") {
@@ -187,7 +187,8 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
 
         val app = new ZTuiApp[Any, Nothing, Int, Msg]:
           def init: ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])]                         = ZIO.succeed((0, ZCmd.none))
-          def update(msg: Msg, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])] = ZIO.succeed((state, ZCmd.none))
+          def update(msg: Msg, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])] =
+            ZIO.succeed((state, ZCmd.none))
           def subscriptions(state: Int): ZStream[Any, Nothing, Msg]                           = ZStream.fromIterable(List.fill(state)(Tick))
           def view(state: Int): Element                                                       = layoutz.Text(state.toString)
           def run(
@@ -209,10 +210,11 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
         case object NoOp extends Msg
 
         val app = new ZTuiApp[Any, Nothing, String, Msg]:
-          def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])]                         = ZIO.succeed(("", ZCmd.none))
-          def update(msg: Msg, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])] = ZIO.succeed((state, ZCmd.none))
-          def subscriptions(state: String): ZStream[Any, Nothing, Msg]                           = ZStream.empty
-          def view(state: String): Element                                                       = layoutz.Text(state)
+          def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])]                            = ZIO.succeed(("", ZCmd.none))
+          def update(msg: Msg, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])] =
+            ZIO.succeed((state, ZCmd.none))
+          def subscriptions(state: String): ZStream[Any, Nothing, Msg]                              = ZStream.empty
+          def view(state: String): Element                                                          = layoutz.Text(state)
           def run(
             clearOnStart: Boolean = true,
             clearOnExit: Boolean = true,
@@ -231,10 +233,11 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
         case object NoOp extends Msg
 
         val app = new ZTuiApp[Any, Nothing, String, Msg]:
-          def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])]                         = ZIO.succeed(("", ZCmd.none))
-          def update(msg: Msg, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])] = ZIO.succeed((state, ZCmd.none))
-          def subscriptions(state: String): ZStream[Any, Nothing, Msg]                           = ZStream.empty
-          def view(state: String): Element                                                       = layoutz.Text(s"State: $state")
+          def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])]                            = ZIO.succeed(("", ZCmd.none))
+          def update(msg: Msg, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, Msg])] =
+            ZIO.succeed((state, ZCmd.none))
+          def subscriptions(state: String): ZStream[Any, Nothing, Msg]                              = ZStream.empty
+          def view(state: String): Element                                                          = layoutz.Text(s"State: $state")
           def run(
             clearOnStart: Boolean = true,
             clearOnExit: Boolean = true,
@@ -253,7 +256,8 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
 
         val app = new ZTuiApp[Any, Nothing, Int, Msg]:
           def init: ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])]                         = ZIO.succeed((0, ZCmd.none))
-          def update(msg: Msg, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])] = ZIO.succeed((state, ZCmd.none))
+          def update(msg: Msg, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, Msg])] =
+            ZIO.succeed((state, ZCmd.none))
           def subscriptions(state: Int): ZStream[Any, Nothing, Msg]                           = ZStream.empty
           def view(state: Int): Element                                                       = layoutz.Text(s"Count: $state")
           def run(
@@ -276,42 +280,44 @@ object LayoutzBridgeSpec extends ZIOSpecDefault:
     suite("cleanupApp")(
       test("calls app onExit") {
         for
-          ref <- Ref.make(false)
-          app = new ZTuiApp[Any, Nothing, String, String]:
-                  def init                                              = ZIO.succeed(("", ZCmd.none))
-                  def update(msg: String, state: String)                = ZIO.succeed((state, ZCmd.none))
-                  def subscriptions(state: String)                      = ZStream.empty
-                  def view(state: String)                               = layoutz.Text(state)
-                  override def onExit(state: String)                    = ref.set(true)
-                  def run(
-                    clearOnStart: Boolean = true,
-                    clearOnExit: Boolean = true,
-                    showQuitMessage: Boolean = false,
-                    alignment: layoutz.Alignment = layoutz.Alignment.Left,
-                  ) = ZIO.unit
-          runtime = Runtime.default
-          _       = LayoutzBridge.cleanupApp(app, "final", runtime)
+          ref     <- Ref.make(false)
+          app      = new ZTuiApp[Any, Nothing, String, String]:
+                       def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, String])]                               = ZIO.succeed(("", ZCmd.none))
+                       def update(msg: String, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, String])] =
+                         ZIO.succeed((state, ZCmd.none))
+                       def subscriptions(state: String): ZStream[Any, Nothing, String]                                 = ZStream.empty
+                       def view(state: String): Element                                                                = layoutz.Text(state)
+                       override def onExit(state: String): ZIO[Any, Nothing, Unit]                                     = ref.set(true)
+                       def run(
+                         clearOnStart: Boolean = true,
+                         clearOnExit: Boolean = true,
+                         showQuitMessage: Boolean = false,
+                         alignment: layoutz.Alignment = layoutz.Alignment.Left,
+                       ): ZIO[Any & Scope, Nothing, Unit] = ZIO.unit
+          runtime  = Runtime.default
+          _        = LayoutzBridge.cleanupApp(app, "final", runtime)
           cleaned <- ref.get
         yield assertTrue(cleaned)
       },
       test("passes final state to onExit") {
         for
-          ref <- Ref.make("")
-          app = new ZTuiApp[Any, Nothing, String, String]:
-                  def init                                              = ZIO.succeed(("", ZCmd.none))
-                  def update(msg: String, state: String)                = ZIO.succeed((state, ZCmd.none))
-                  def subscriptions(state: String)                      = ZStream.empty
-                  def view(state: String)                               = layoutz.Text(state)
-                  override def onExit(state: String)                    = ref.set(state)
-                  def run(
-                    clearOnStart: Boolean = true,
-                    clearOnExit: Boolean = true,
-                    showQuitMessage: Boolean = false,
-                    alignment: layoutz.Alignment = layoutz.Alignment.Left,
-                  ) = ZIO.unit
+          ref    <- Ref.make("")
+          app     = new ZTuiApp[Any, Nothing, String, String]:
+                      def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, String])]                               = ZIO.succeed(("", ZCmd.none))
+                      def update(msg: String, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, String])] =
+                        ZIO.succeed((state, ZCmd.none))
+                      def subscriptions(state: String): ZStream[Any, Nothing, String]                                 = ZStream.empty
+                      def view(state: String): Element                                                                = layoutz.Text(state)
+                      override def onExit(state: String): ZIO[Any, Nothing, Unit]                                     = ref.set(state)
+                      def run(
+                        clearOnStart: Boolean = true,
+                        clearOnExit: Boolean = true,
+                        showQuitMessage: Boolean = false,
+                        alignment: layoutz.Alignment = layoutz.Alignment.Left,
+                      ): ZIO[Any & Scope, Nothing, Unit] = ZIO.unit
           runtime = Runtime.default
           _       = LayoutzBridge.cleanupApp(app, "my-final-state", runtime)
-          state   <- ref.get
+          state  <- ref.get
         yield assertTrue(state == "my-final-state")
       },
     ),

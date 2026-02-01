@@ -54,7 +54,7 @@ object TUIErrorSpec extends ZIOSpecDefault:
       },
       test("can be pattern matched") {
         val error: TUIError = TUIError.TerminalClosed
-        val matched = error match
+        val matched         = error match
           case TUIError.TerminalClosed => true
           case _                       => false
         assertTrue(matched)

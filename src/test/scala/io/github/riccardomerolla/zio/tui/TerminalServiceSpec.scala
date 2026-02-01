@@ -22,186 +22,186 @@ object TerminalServiceSpec extends ZIOSpecDefault:
 
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("TerminalService")(
     suite("rendering")(
-    test("renders text widget successfully") {
-      for
-        widget <- ZIO.succeed(Widget.text("Hello, ZIO TUI!"))
-        result <- TerminalService.render(widget)
-      yield assertTrue(
-        result.output.contains("Hello, ZIO TUI!"),
-        result.charCount > 0,
-      )
-    },
-    test("renders section widget with title") {
-      for
-        widget <- ZIO.succeed(Widget.section("Test Section")("Content here"))
-        result <- TerminalService.render(widget)
-      yield assertTrue(
-        result.output.contains("Test Section"),
-        result.output.contains("Content here"),
-      )
-    },
-    test("renders list widget with multiple items") {
-      for
-        widget <- ZIO.succeed(Widget.list("Item 1", "Item 2", "Item 3"))
-        result <- TerminalService.render(widget)
-      yield assertTrue(
-        result.output.contains("Item 1"),
-        result.output.contains("Item 2"),
-        result.output.contains("Item 3"),
-      )
-    },
-    test("renders table widget with headers and rows") {
-      for
-        widget <- ZIO.succeed(Widget.table(
-                    Seq("Name", "Age"),
-                    Seq(
-                      Seq("Alice", "30"),
-                      Seq("Bob", "25"),
-                    ),
-                  ))
-        result <- TerminalService.render(widget)
-      yield assertTrue(
-        result.output.contains("Name"),
-        result.output.contains("Age"),
-        result.output.contains("Alice"),
-        result.output.contains("Bob"),
-      )
-    },
-    test("render result contains correct metadata") {
-      for
-        widget <- ZIO.succeed(Widget.text("Test"))
-        result <- TerminalService.render(widget)
-      yield assertTrue(
-        result.lineCount >= 1,
-        result.charCount >= 4,
-        result.output == "Test",
-      )
-    },
-    test("println outputs text without failure") {
-      for
-        _ <- TerminalService.println("Test output")
-      yield assertTrue(true)
-    },
-    test("renderAll renders multiple widgets") {
-      for
-        service <- ZIO.service[TerminalService]
-        widgets <- ZIO.succeed(Seq(Widget.text("First"), Widget.text("Second")))
-        results <- service.renderAll(widgets)
-      yield assertTrue(
-        results.length == 2,
-        results(0).output.contains("First"),
-        results(1).output.contains("Second"),
-      )
-    },
-    test("clear succeeds without error") {
-      for
-        service <- ZIO.service[TerminalService]
-        _       <- service.clear
-      yield assertTrue(true)
-    },
-    test("print outputs text") {
-      for
-        service <- ZIO.service[TerminalService]
-        _       <- service.print("No newline")
-      yield assertTrue(true)
-    },
+      test("renders text widget successfully") {
+        for
+          widget <- ZIO.succeed(Widget.text("Hello, ZIO TUI!"))
+          result <- TerminalService.render(widget)
+        yield assertTrue(
+          result.output.contains("Hello, ZIO TUI!"),
+          result.charCount > 0,
+        )
+      },
+      test("renders section widget with title") {
+        for
+          widget <- ZIO.succeed(Widget.section("Test Section")("Content here"))
+          result <- TerminalService.render(widget)
+        yield assertTrue(
+          result.output.contains("Test Section"),
+          result.output.contains("Content here"),
+        )
+      },
+      test("renders list widget with multiple items") {
+        for
+          widget <- ZIO.succeed(Widget.list("Item 1", "Item 2", "Item 3"))
+          result <- TerminalService.render(widget)
+        yield assertTrue(
+          result.output.contains("Item 1"),
+          result.output.contains("Item 2"),
+          result.output.contains("Item 3"),
+        )
+      },
+      test("renders table widget with headers and rows") {
+        for
+          widget <- ZIO.succeed(Widget.table(
+                      Seq("Name", "Age"),
+                      Seq(
+                        Seq("Alice", "30"),
+                        Seq("Bob", "25"),
+                      ),
+                    ))
+          result <- TerminalService.render(widget)
+        yield assertTrue(
+          result.output.contains("Name"),
+          result.output.contains("Age"),
+          result.output.contains("Alice"),
+          result.output.contains("Bob"),
+        )
+      },
+      test("render result contains correct metadata") {
+        for
+          widget <- ZIO.succeed(Widget.text("Test"))
+          result <- TerminalService.render(widget)
+        yield assertTrue(
+          result.lineCount >= 1,
+          result.charCount >= 4,
+          result.output == "Test",
+        )
+      },
+      test("println outputs text without failure") {
+        for
+          _ <- TerminalService.println("Test output")
+        yield assertTrue(true)
+      },
+      test("renderAll renders multiple widgets") {
+        for
+          service <- ZIO.service[TerminalService]
+          widgets <- ZIO.succeed(Seq(Widget.text("First"), Widget.text("Second")))
+          results <- service.renderAll(widgets)
+        yield assertTrue(
+          results.length == 2,
+          results(0).output.contains("First"),
+          results(1).output.contains("Second"),
+        )
+      },
+      test("clear succeeds without error") {
+        for
+          service <- ZIO.service[TerminalService]
+          _       <- service.clear
+        yield assertTrue(true)
+      },
+      test("print outputs text") {
+        for
+          service <- ZIO.service[TerminalService]
+          _       <- service.print("No newline")
+        yield assertTrue(true)
+      },
     ),
     suite("domain types")(
-    test("Rect represents terminal dimensions") {
-      val rect = Rect.fromSize(80, 24)
-      assertTrue(
-        rect.x == 0,
-        rect.y == 0,
-        rect.width == 80,
-        rect.height == 24,
-      )
-    },
-    test("Rect can be created with position") {
-      val rect = Rect(x = 10, y = 5, width = 60, height = 15)
-      assertTrue(
-        rect.x == 10,
-        rect.y == 5,
-        rect.width == 60,
-        rect.height == 15,
-      )
-    },
+      test("Rect represents terminal dimensions") {
+        val rect = Rect.fromSize(80, 24)
+        assertTrue(
+          rect.x == 0,
+          rect.y == 0,
+          rect.width == 80,
+          rect.height == 24,
+        )
+      },
+      test("Rect can be created with position") {
+        val rect = Rect(x = 10, y = 5, width = 60, height = 15)
+        assertTrue(
+          rect.x == 10,
+          rect.y == 5,
+          rect.width == 60,
+          rect.height == 15,
+        )
+      },
     ),
     suite("terminal operations")(
-    test("size returns terminal dimensions") {
-      for
-        size <- ZIO.serviceWithZIO[TerminalService](_.size)
-      yield assertTrue(
-        size.width == 80,
-        size.height == 24,
-        size.x == 0,
-        size.y == 0,
-      )
-    }.provideLayer(TerminalService.test()),
-    test("flush completes without error") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.flush)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("setCursor positions cursor at coordinates") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(10, 5))
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("hideCursor succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.hideCursor)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("showCursor succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.showCursor)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("enableRawMode succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.enableRawMode)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("disableRawMode succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.disableRawMode)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("enterAlternateScreen succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.enterAlternateScreen)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
-    test("exitAlternateScreen succeeds") {
-      for
-        _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
-      yield assertTrue(true)
-    }.provideLayer(TerminalService.test()),
+      test("size returns terminal dimensions") {
+        for
+          size <- ZIO.serviceWithZIO[TerminalService](_.size)
+        yield assertTrue(
+          size.width == 80,
+          size.height == 24,
+          size.x == 0,
+          size.y == 0,
+        )
+      }.provideLayer(TerminalService.test()),
+      test("flush completes without error") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.flush)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("setCursor positions cursor at coordinates") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(10, 5))
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("hideCursor succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.hideCursor)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("showCursor succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.showCursor)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("enableRawMode succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.enableRawMode)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("disableRawMode succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.disableRawMode)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("enterAlternateScreen succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.enterAlternateScreen)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("exitAlternateScreen succeeds") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
     ),
     suite("scoped helpers")(
-    test("withRawMode enables and disables raw mode") {
-      for
-        result <- TerminalService.withRawMode {
-                    ZIO.succeed("executed in raw mode")
-                  }
-      yield assertTrue(result == "executed in raw mode")
-    }.provideLayer(TerminalService.test()),
-    test("withAlternateScreen enters and exits alternate screen") {
-      for
-        result <- TerminalService.withAlternateScreen {
-                    ZIO.succeed("executed in alternate screen")
-                  }
-      yield assertTrue(result == "executed in alternate screen")
-    }.provideLayer(TerminalService.test()),
-    test("withRawMode and withAlternateScreen compose") {
-      for
-        result <- TerminalService.withRawMode {
-                    TerminalService.withAlternateScreen {
-                      ZIO.succeed("nested scoped effects")
+      test("withRawMode enables and disables raw mode") {
+        for
+          result <- TerminalService.withRawMode {
+                      ZIO.succeed("executed in raw mode")
                     }
-                  }
-      yield assertTrue(result == "nested scoped effects")
-    }.provideLayer(TerminalService.test()),
+        yield assertTrue(result == "executed in raw mode")
+      }.provideLayer(TerminalService.test()),
+      test("withAlternateScreen enters and exits alternate screen") {
+        for
+          result <- TerminalService.withAlternateScreen {
+                      ZIO.succeed("executed in alternate screen")
+                    }
+        yield assertTrue(result == "executed in alternate screen")
+      }.provideLayer(TerminalService.test()),
+      test("withRawMode and withAlternateScreen compose") {
+        for
+          result <- TerminalService.withRawMode {
+                      TerminalService.withAlternateScreen {
+                        ZIO.succeed("nested scoped effects")
+                      }
+                    }
+        yield assertTrue(result == "nested scoped effects")
+      }.provideLayer(TerminalService.test()),
     ),
     suite("test layer configuration")(
       test("test layer with custom terminal size") {
@@ -222,11 +222,13 @@ object TerminalServiceSpec extends ZIOSpecDefault:
       }.provideLayer(TerminalService.test()),
       test("test layer with custom render results") {
         val widget = Widget.text("custom")
-        val customResult = RenderResult.fromString("Custom Output")
+        RenderResult.fromString("Custom Output")
         for
           result <- TerminalService.render(widget)
         yield assertTrue(result.output == "Custom Output")
-      }.provideLayer(TerminalService.test(renderResults = Map(Widget.text("custom") -> RenderResult.fromString("Custom Output")))),
+      }.provideLayer(TerminalService.test(renderResults =
+        Map(Widget.text("custom") -> RenderResult.fromString("Custom Output"))
+      )),
     ),
     suite("accessor methods")(
       test("render accessor method") {

@@ -21,10 +21,10 @@ object ZTuiAppSpec extends ZIOSpecDefault:
 
   // Test message types
   sealed trait TestMsg
-  case object Increment     extends TestMsg
-  case object Decrement     extends TestMsg
+  case object Increment       extends TestMsg
+  case object Decrement       extends TestMsg
   case class SetValue(n: Int) extends TestMsg
-  case object Exit          extends TestMsg
+  case object Exit            extends TestMsg
 
   // Simple counter app for testing
   class CounterApp extends ZTuiApp[Any, Nothing, Int, TestMsg]:
@@ -33,10 +33,10 @@ object ZTuiAppSpec extends ZIOSpecDefault:
 
     def update(msg: TestMsg, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, TestMsg])] =
       msg match
-        case Increment      => ZIO.succeed((state + 1, ZCmd.none))
-        case Decrement      => ZIO.succeed((state - 1, ZCmd.none))
-        case SetValue(n)    => ZIO.succeed((n, ZCmd.none))
-        case Exit           => ZIO.succeed((state, ZCmd.exit))
+        case Increment   => ZIO.succeed((state + 1, ZCmd.none))
+        case Decrement   => ZIO.succeed((state - 1, ZCmd.none))
+        case SetValue(n) => ZIO.succeed((n, ZCmd.none))
+        case Exit        => ZIO.succeed((state, ZCmd.exit))
 
     def subscriptions(state: Int): ZStream[Any, Nothing, TestMsg] =
       ZStream.empty
@@ -111,10 +111,13 @@ object ZTuiAppSpec extends ZIOSpecDefault:
         case SetValue(n) =>
           ZIO.succeed((n, ZCmd.fire(ZIO.unit)))
         case Increment   =>
-          ZIO.succeed((state + 1, ZCmd.batch(
-            ZCmd.fire(ZIO.unit),
-            ZCmd.effect(ZIO.succeed(state + 10))(SetValue.apply),
-          )))
+          ZIO.succeed((
+            state + 1,
+            ZCmd.batch(
+              ZCmd.fire(ZIO.unit),
+              ZCmd.effect(ZIO.succeed(state + 10))(SetValue.apply),
+            ),
+          ))
         case _           => ZIO.succeed((state, ZCmd.none))
 
     def subscriptions(state: Int): ZStream[Any, Nothing, TestMsg] =
@@ -229,14 +232,14 @@ object ZTuiAppSpec extends ZIOSpecDefault:
     ),
     suite("view")(
       test("renders state as Element") {
-        val app = new CounterApp
+        val app     = new CounterApp
         val element = app.view(42)
         assertTrue(element match
           case layoutz.Text(text) => text.contains("42")
           case _                  => false)
       },
       test("updates view when state changes") {
-        val app = new CounterApp
+        val app   = new CounterApp
         val view1 = app.view(0)
         val view2 = app.view(10)
         assertTrue(
@@ -256,28 +259,29 @@ object ZTuiAppSpec extends ZIOSpecDefault:
       },
       test("can override onExit for cleanup") {
         for
-          ref <- Ref.make(false)
-          app = new CleanupApp(ref)
-          _   <- app.onExit("final state")
+          ref     <- Ref.make(false)
+          app      = new CleanupApp(ref)
+          _       <- app.onExit("final state")
           cleaned <- ref.get
         yield assertTrue(cleaned)
       },
       test("onExit receives final state") {
         for
-          ref <- Ref.make("")
-          app = new ZTuiApp[Any, Nothing, String, TestMsg]:
-                  def init = ZIO.succeed(("init", ZCmd.none))
-                  def update(msg: TestMsg, state: String) = ZIO.succeed((state, ZCmd.none))
-                  def subscriptions(state: String) = ZStream.empty
-                  def view(state: String) = layoutz.Text(state)
-                  override def onExit(state: String) = ref.set(state)
-                  def run(
-                    clearOnStart: Boolean = true,
-                    clearOnExit: Boolean = true,
-                    showQuitMessage: Boolean = false,
-                    alignment: layoutz.Alignment = layoutz.Alignment.Left,
-                  ) = ZIO.unit
-          _   <- app.onExit("my-final-state")
+          ref        <- Ref.make("")
+          app         = new ZTuiApp[Any, Nothing, String, TestMsg]:
+                          def init: ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, TestMsg])]                                = ZIO.succeed(("init", ZCmd.none))
+                          def update(msg: TestMsg, state: String): ZIO[Any, Nothing, (String, ZCmd[Any, Nothing, TestMsg])] =
+                            ZIO.succeed((state, ZCmd.none))
+                          def subscriptions(state: String): ZStream[Any, Nothing, TestMsg]                                  = ZStream.empty
+                          def view(state: String): Element                                                                  = layoutz.Text(state)
+                          override def onExit(state: String): ZIO[Any, Nothing, Unit]                                       = ref.set(state)
+                          def run(
+                            clearOnStart: Boolean = true,
+                            clearOnExit: Boolean = true,
+                            showQuitMessage: Boolean = false,
+                            alignment: layoutz.Alignment = layoutz.Alignment.Left,
+                          ): ZIO[Any & Scope, Nothing, Unit] = ZIO.unit
+          _          <- app.onExit("my-final-state")
           finalState <- ref.get
         yield assertTrue(finalState == "my-final-state")
       },
@@ -331,7 +335,7 @@ object ZTuiAppSpec extends ZIOSpecDefault:
         yield assertTrue(
           cmd match
             case ZCmd.Batch(cmds) => cmds.length == 2
-            case _                => false,
+            case _                => false
         )
       },
     ),
@@ -343,7 +347,7 @@ object ZTuiAppSpec extends ZIOSpecDefault:
           (state1, _)       <- app.update(Increment, initialState)
           (state2, _)       <- app.update(Increment, state1)
           (state3, _)       <- app.update(Decrement, state2)
-          view              = app.view(state3)
+          view               = app.view(state3)
         yield assertTrue(
           state3 == 1,
           view match
@@ -354,7 +358,7 @@ object ZTuiAppSpec extends ZIOSpecDefault:
       test("handles exit command in update") {
         val app = new CounterApp
         for
-          (state, _)    <- app.init
+          (state, _)        <- app.init
           (finalState, cmd) <- app.update(Exit, state)
         yield assertTrue(
           cmd == ZCmd.Exit,

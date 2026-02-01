@@ -1,6 +1,10 @@
 package io.github.riccardomerolla.zio.tui
 
+import zio.stream.ZStream
 import zio.test.*
+import zio.{ Scope, ZIO }
+
+import layoutz.Element
 
 /** ZIO Test specification for package object exports.
   *
@@ -11,7 +15,7 @@ object PackageSpec extends ZIOSpecDefault:
   def spec: Spec[TestEnvironment, Any] = suite("Package exports")(
     test("Widget type is exported") {
       val widget: Widget = Widget.text("test")
-      assertTrue(widget != null)
+      assertTrue(widget.render.contains("test"))
     },
     test("Rect type is exported") {
       val rect: Rect = Rect.fromSize(80, 24)
@@ -37,17 +41,18 @@ object PackageSpec extends ZIOSpecDefault:
     },
     test("ZTuiApp type is exported") {
       val app: ZTuiApp[Any, Nothing, Int, String] = new ZTuiApp[Any, Nothing, Int, String]:
-        def init = zio.ZIO.succeed((0, ZCmd.none))
-        def update(msg: String, state: Int) = zio.ZIO.succeed((state, ZCmd.none))
-        def subscriptions(state: Int) = zio.stream.ZStream.empty
-        def view(state: Int) = layoutz.Text(state.toString)
+        def init: ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, String])]                            = ZIO.succeed((0, ZCmd.none))
+        def update(msg: String, state: Int): ZIO[Any, Nothing, (Int, ZCmd[Any, Nothing, String])] =
+          ZIO.succeed((state, ZCmd.none))
+        def subscriptions(state: Int): ZStream[Any, Nothing, String]                              = ZStream.empty
+        def view(state: Int): Element                                                             = layoutz.Text(state.toString)
         def run(
           clearOnStart: Boolean = true,
           clearOnExit: Boolean = true,
           showQuitMessage: Boolean = false,
           alignment: layoutz.Alignment = layoutz.Alignment.Left,
-        ) = zio.ZIO.unit
-      assertTrue(app != null)
+        ): ZIO[Any & Scope, Nothing, Unit] = ZIO.unit
+      assertTrue(app.view(42) == layoutz.Text("42"))
     },
     test("Widget companion object is exported") {
       val widget = Widget.text("test")
