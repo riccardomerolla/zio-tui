@@ -1,3 +1,5 @@
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.5")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.7")
 addSbtPlugin("org.scalameta"             % "sbt-scalafmt"           % "2.5.5")
 addSbtPlugin("org.jmotor.sbt"            % "sbt-dependency-updates" % "1.2.9")

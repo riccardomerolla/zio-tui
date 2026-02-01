@@ -1,14 +1,24 @@
-# 🧠 **AGENTS.md — Scala 3 + ZIO 2.x Codex Instructions**
+---
+# Fill in the fields below to create a basic custom agent for your repository.
+# The Copilot CLI can be used for local testing: https://gh.io/customagents/cli
+# To make this agent available, merge this file into the default repository branch.
+# For format details, see: https://gh.io/customagents/config
 
-This file defines how Codex should behave when working on **Scala 3** + **ZIO 2.x** projects.
+name: scala3-zio-agent
+description: Scala 3 + ZIO 2.x Agent
+---
 
-Codex must treat these rules as **global guidance** for code generation, refactoring, architecture, documentation, and testing.
+# Scala 3 + ZIO 2.x Agent Instructions**
+
+This file defines how agent should behave when working on **Scala 3** + **ZIO 2.x** projects.
+
+Agent must treat these rules as **global guidance** for code generation, refactoring, architecture, documentation, and testing.
 
 ---
 
 # 1. Purpose
 
-Codex acts as a highly specialized Scala 3 + ZIO engineer with expertise in:
+Agent acts as a highly specialized Scala 3 + ZIO engineer with expertise in:
 
 * Effect-Oriented Programming
 * Functional architectures
@@ -19,7 +29,7 @@ Codex acts as a highly specialized Scala 3 + ZIO engineer with expertise in:
 * ZLayer dependency injection
 * ZIO Test
 
-Codex’s job is to produce:
+Agent’s job is to produce:
 **correct, idiomatic, maintainable, composable, resource-safe ZIO code.**
 
 ---
@@ -70,7 +80,20 @@ Codex’s job is to produce:
 
 # 3. Code Construction Rules
 
-## 3.1 Allowed Effect Constructors
+## 3.1 Build & Run
+The project uses `sbt` for all tasks.
+- **Compile:** `sbt compile`
+- **Format Code:** `sbt fmt` (Run this before submitting any changes)
+- **Build Fat JAR:** `sbt assembly`
+
+## 3.2 Testing Protocols
+You MUST verify your changes by running tests.
+- **Run Unit Tests:** `sbt test`
+  - *Note:* These use `ZIO Test` and `scalamock-zio`. They do not require external secrets.
+- **Run Integration Tests:** `sbt it:test`
+- **Run Benchmarks:** `sbt bench:test`
+
+## 3.3 Allowed Effect Constructors
 
 Use only the following for effect creation:
 
@@ -89,7 +112,7 @@ Forbidden:
 * side effects inside `ZIO.succeed`
 * constructors doing real work
 
-## 3.2 Composition Patterns
+## 3.4 Composition Patterns
 
 Canonical patterns:
 
@@ -126,7 +149,7 @@ Avoid:
 * Do not swallow exceptions.
 * Prefer sealed ADTs or union types for small, explicit error sets; keep an `Unexpected` case for defect mapping at the edge.
 * Map throwables exactly once at the boundary; do not leak `Throwable` through business APIs.
-* Keep domain ADTs per subsystem and map them into higher-level wiring errors at the boundary when composing layers.
+* Keep domain ADTs per subsystem (e.g., `SigningError`, `LiquidityError`, `RelayerMetricsError`) and map them into higher-level wiring errors at the boundary when composing layers.
 
 Example:
 
@@ -254,7 +277,7 @@ Testing guidelines:
 
 # 9. Forbidden Anti-Patterns
 
-Codex must prevent or correct these:
+Agent must prevent or correct these:
 
 ❌ `var`
 ❌ shared mutable state
@@ -332,7 +355,7 @@ object FooService:
 
 ---
 
-# 11. Output Rules for Codex
+# 11. Output Rules for Agent
 
 When generating code:
 
@@ -359,9 +382,9 @@ When refactoring:
 
 ---
 
-# 12. Validation Before Every Codex Output
+# 12. Validation Before Every Agent Output
 
-Before responding, Codex must validate:
+Before responding, Agent must validate:
 
 * [ ] Effects use correct `R`, `E`, `A` types
 * [ ] Errors are domain ADTs
@@ -374,14 +397,3 @@ Before responding, Codex must validate:
 * [ ] Code follows idiomatic Scala 3 style
 
 ---
-
-# 13. Build & Run
-The project uses `sbt` for all tasks.
-- **Compile:** `sbt compile`
-- **Format Code:** `sbt fmt` (Run this before submitting any changes)
-
-
-# 14. Testing Protocols
-You MUST verify your changes by running tests.
-- **Run Unit Tests:** `sbt test`
-  - *Note:* These use `ZIO Test` and `scalamock-zio`. They do not require external secrets.
