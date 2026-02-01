@@ -43,6 +43,7 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio" % "2.1.24",
       "dev.zio" %% "zio-streams" % "2.1.24",
       "xyz.matthieucourt" %% "layoutz" % "0.6.0",
+      "org.jline" % "jline" % "3.25.1",
       "dev.zio" %% "zio-test" % "2.1.24" % Test,
       "dev.zio" %% "zio-test-sbt" % "2.1.24" % Test
     ),
