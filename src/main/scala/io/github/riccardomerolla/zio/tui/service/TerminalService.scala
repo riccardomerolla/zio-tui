@@ -342,12 +342,13 @@ object TerminalService:
     ZLayer.scoped {
       for
         terminal <- ZIO.acquireRelease(
-          acquire = ZIO.attempt(
-            org.jline.terminal.TerminalBuilder.terminal()
-          ).orDie
-        )(release = terminal =>
-          ZIO.succeed(terminal.close())
-        )
+                      acquire = ZIO.attempt(
+                        org.jline.terminal.TerminalBuilder.terminal()
+                      ).orDie
+                    )(release =
+                      terminal =>
+                        ZIO.succeed(terminal.close())
+                    )
       yield TerminalServiceLive(TerminalConfig.default, terminal)
     }
 
@@ -360,12 +361,13 @@ object TerminalService:
     ZLayer.scoped {
       for
         terminal <- ZIO.acquireRelease(
-          acquire = ZIO.attempt(
-            org.jline.terminal.TerminalBuilder.terminal()
-          ).orDie
-        )(release = terminal =>
-          ZIO.succeed(terminal.close())
-        )
+                      acquire = ZIO.attempt(
+                        org.jline.terminal.TerminalBuilder.terminal()
+                      ).orDie
+                    )(release =
+                      terminal =>
+                        ZIO.succeed(terminal.close())
+                    )
       yield TerminalServiceLive(config, terminal)
     }
 
@@ -425,5 +427,4 @@ object TerminalService:
         ZIO.unit
 
       override def exitAlternateScreen: IO[TUIError, Unit] =
-        ZIO.unit
-    )
+        ZIO.unit)
