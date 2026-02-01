@@ -27,6 +27,7 @@ package io.github.riccardomerolla.zio
   * ==Core Types==
   *
   *   - [[domain.Widget]]: Immutable widget descriptions
+  *   - [[domain.ZTuiApp]]: Core application abstraction for TUI apps
   *   - [[service.TerminalService]]: Main service for terminal operations
   *   - [[error.TUIError]]: Typed errors for terminal operations
   */
@@ -40,6 +41,10 @@ package object tui:
 
   type TerminalConfig = domain.TerminalConfig
   val TerminalConfig: io.github.riccardomerolla.zio.tui.domain.TerminalConfig.type = domain.TerminalConfig
+
+  type ZCmd[R, E, Msg] = domain.ZCmd[R, E, Msg]
+
+  type ZTuiApp[R, E, State, Msg] = domain.ZTuiApp[R, E, State, Msg]
 
   type TerminalService = service.TerminalService
   val TerminalService: io.github.riccardomerolla.zio.tui.service.TerminalService.type = service.TerminalService
