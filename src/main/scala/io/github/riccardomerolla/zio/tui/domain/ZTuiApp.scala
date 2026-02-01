@@ -5,20 +5,6 @@ import zio.stream.ZStream
 
 import layoutz.Element
 
-/** Command abstraction for side effects in response to messages.
-  *
-  * A ZCmd represents an effect that should be executed asynchronously and may produce a message to be fed back into the
-  * state machine.
-  *
-  * @tparam R
-  *   The environment required for the effect
-  * @tparam E
-  *   The error type
-  * @tparam Msg
-  *   The message type produced by the effect
-  */
-type ZCmd[R, E, Msg] = ZIO[R, E, Msg]
-
 /** Core application abstraction for ZIO-based TUI applications.
   *
   * ZTuiApp wraps layoutz's LayoutzApp with ZIO effects, following the MVU (Model-View-Update) pattern but with

@@ -43,6 +43,7 @@ package object tui:
   val TerminalConfig: io.github.riccardomerolla.zio.tui.domain.TerminalConfig.type = domain.TerminalConfig
 
   type ZCmd[R, E, Msg] = domain.ZCmd[R, E, Msg]
+  val ZCmd: domain.ZCmd.type = domain.ZCmd
 
   type ZTuiApp[R, E, State, Msg] = domain.ZTuiApp[R, E, State, Msg]
 
