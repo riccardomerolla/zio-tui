@@ -60,6 +60,13 @@ trait TerminalService:
     */
   def size: UIO[Rect]
 
+  /** Flush output buffer to ensure all content is written.
+    *
+    * @return
+    *   Effect that flushes the output stream
+    */
+  def flush: IO[TUIError, Unit]
+
 /** Live implementation of TerminalService using stdout.
   */
 final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
@@ -111,6 +118,16 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def size: UIO[Rect] =
     ZIO.succeed(Rect.fromSize(config.width, config.height))
+
+  override def flush: IO[TUIError, Unit] =
+    ZIO.attempt {
+      scala.Console.flush()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "flush",
+        cause = throwable.getMessage,
+      )
+    }
 
 object TerminalService:
   /** Access the TerminalService from the environment and render a widget.
@@ -170,7 +187,10 @@ object TerminalService:
         ZIO.unit
 
       override def size: UIO[Rect] =
-        ZIO.succeed(Rect.fromSize(80, 24)))
+        ZIO.succeed(Rect.fromSize(80, 24))
+
+      override def flush: IO[TUIError, Unit] =
+        ZIO.unit)
 
   /** Test/mock implementation returning predefined results.
     *

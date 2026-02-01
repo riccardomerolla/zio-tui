@@ -109,4 +109,9 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         size.y == 0,
       )
     }.provideLayer(TerminalService.test()),
+    test("flush completes without error") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.flush)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
