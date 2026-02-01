@@ -21,6 +21,7 @@ object TerminalServiceSpec extends ZIOSpecDefault:
     TerminalService.test()
 
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("TerminalService")(
+    suite("rendering")(
     test("renders text widget successfully") {
       for
         widget <- ZIO.succeed(Widget.text("Hello, ZIO TUI!"))
@@ -81,6 +82,31 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- TerminalService.println("Test output")
       yield assertTrue(true)
     },
+    test("renderAll renders multiple widgets") {
+      for
+        service <- ZIO.service[TerminalService]
+        widgets <- ZIO.succeed(Seq(Widget.text("First"), Widget.text("Second")))
+        results <- service.renderAll(widgets)
+      yield assertTrue(
+        results.length == 2,
+        results(0).output.contains("First"),
+        results(1).output.contains("Second"),
+      )
+    },
+    test("clear succeeds without error") {
+      for
+        service <- ZIO.service[TerminalService]
+        _       <- service.clear
+      yield assertTrue(true)
+    },
+    test("print outputs text") {
+      for
+        service <- ZIO.service[TerminalService]
+        _       <- service.print("No newline")
+      yield assertTrue(true)
+    },
+    ),
+    suite("domain types")(
     test("Rect represents terminal dimensions") {
       val rect = Rect.fromSize(80, 24)
       assertTrue(
@@ -99,6 +125,8 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         rect.height == 15,
       )
     },
+    ),
+    suite("terminal operations")(
     test("size returns terminal dimensions") {
       for
         size <- ZIO.serviceWithZIO[TerminalService](_.size)
@@ -149,6 +177,8 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- ZIO.serviceWithZIO[TerminalService](_.exitAlternateScreen)
       yield assertTrue(true)
     }.provideLayer(TerminalService.test()),
+    ),
+    suite("scoped helpers")(
     test("withRawMode enables and disables raw mode") {
       for
         result <- TerminalService.withRawMode {
@@ -172,4 +202,84 @@ object TerminalServiceSpec extends ZIOSpecDefault:
                   }
       yield assertTrue(result == "nested scoped effects")
     }.provideLayer(TerminalService.test()),
+    ),
+    suite("test layer configuration")(
+      test("test layer with custom terminal size") {
+        for
+          size <- ZIO.serviceWithZIO[TerminalService](_.size)
+        yield assertTrue(
+          size.width == 100,
+          size.height == 50,
+        )
+      }.provideLayer(TerminalService.test(terminalSize = Rect.fromSize(100, 50))),
+      test("test layer with default size") {
+        for
+          size <- ZIO.serviceWithZIO[TerminalService](_.size)
+        yield assertTrue(
+          size.width == 80,
+          size.height == 24,
+        )
+      }.provideLayer(TerminalService.test()),
+      test("test layer with custom render results") {
+        val widget = Widget.text("custom")
+        val customResult = RenderResult.fromString("Custom Output")
+        for
+          result <- TerminalService.render(widget)
+        yield assertTrue(result.output == "Custom Output")
+      }.provideLayer(TerminalService.test(renderResults = Map(Widget.text("custom") -> RenderResult.fromString("Custom Output")))),
+    ),
+    suite("accessor methods")(
+      test("render accessor method") {
+        for
+          widget <- ZIO.succeed(Widget.text("Accessor test"))
+          result <- TerminalService.render(widget)
+        yield assertTrue(result.output.contains("Accessor test"))
+      },
+      test("println accessor method") {
+        for
+          _ <- TerminalService.println("Accessor println")
+        yield assertTrue(true)
+      },
+    ),
+    suite("edge cases")(
+      test("render empty text") {
+        for
+          widget <- ZIO.succeed(Widget.text(""))
+          result <- TerminalService.render(widget)
+        yield assertTrue(result.output.isEmpty)
+      },
+      test("renderAll with empty sequence") {
+        for
+          service <- ZIO.service[TerminalService]
+          results <- service.renderAll(Seq.empty)
+        yield assertTrue(results.isEmpty)
+      },
+      test("renderAll with single widget") {
+        for
+          service <- ZIO.service[TerminalService]
+          widgets <- ZIO.succeed(Seq(Widget.text("Only one")))
+          results <- service.renderAll(widgets)
+        yield assertTrue(
+          results.length == 1,
+          results.head.output.contains("Only one"),
+        )
+      },
+      test("setCursor with boundary coordinates") {
+        for
+          _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(0, 0))
+          _ <- ZIO.serviceWithZIO[TerminalService](_.setCursor(79, 23))
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+      test("multiple operations in sequence") {
+        for
+          service <- ZIO.service[TerminalService]
+          _       <- service.clear
+          _       <- service.hideCursor
+          _       <- service.setCursor(10, 10)
+          widget  <- ZIO.succeed(Widget.text("Test"))
+          _       <- service.render(widget)
+          _       <- service.showCursor
+        yield assertTrue(true)
+      }.provideLayer(TerminalService.test()),
+    ),
   ).provideLayerShared(testLayer)
