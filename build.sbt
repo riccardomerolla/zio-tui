@@ -49,4 +49,7 @@ lazy val root = (project in file("."))
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     coverageExcludedPackages := ".*\\.example\\..*",
+    coverageMinimumStmtTotal := 70,
+    coverageFailOnMinimum := true,
+    coverageHighlighting := true,
   )

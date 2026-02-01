@@ -1,11 +1,19 @@
 package io.github.riccardomerolla.zio.tui
 
-import zio.test.{ Spec, TestEnvironment, ZIOSpecDefault, assertTrue }
-import zio.{ Scope, ZIO, ZLayer }
+import java.io.*
+import java.nio.charset.Charset
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicReference }
 
-import io.github.riccardomerolla.zio.tui.domain.{ RenderResult, Widget }
+import zio.test.{ Spec, TestEnvironment, ZIOSpecDefault, assertTrue }
+import zio.{ Scope, ZEnvironment, ZIO, ZLayer }
+
+import io.github.riccardomerolla.zio.tui.domain.{ Rect, RenderResult, TerminalConfig, Widget }
 import io.github.riccardomerolla.zio.tui.error.TUIError
-import io.github.riccardomerolla.zio.tui.service.TerminalService
+import io.github.riccardomerolla.zio.tui.service.{ TerminalService, TerminalServiceLive }
+import org.jline.terminal.impl.AbstractTerminal
+import org.jline.terminal.spi.{ SystemStream, TerminalProvider }
+import org.jline.terminal.{ Attributes, Size }
+import org.jline.utils.{ NonBlockingReader, NonBlockingReaderImpl }
 
 /** ZIO Test specification for TerminalService.
   *
@@ -14,8 +22,110 @@ import io.github.riccardomerolla.zio.tui.service.TerminalService
   *   - Render result correctness
   *   - Error handling with typed errors
   *   - Service layer composition
+  *   - TerminalServiceLive implementation
   */
 object TerminalServiceSpec extends ZIOSpecDefault:
+
+  // Test terminal that captures output for verification
+  class TestTerminal extends AbstractTerminal("test", "ansi"):
+    private val outputBuffer      = new StringWriter()
+    private val testWriter        = new PrintWriter(outputBuffer)
+    private val inputStream       = new ByteArrayInputStream(Array.emptyByteArray)
+    private val outputStream      = new ByteArrayOutputStream()
+    private val nonBlockingReader =
+      new NonBlockingReaderImpl("test", new java.io.InputStreamReader(inputStream, Charset.defaultCharset()))
+    private val attributes        = new AtomicReference[Attributes](new Attributes())
+    private val terminalSize      = new AtomicReference[Size](new Size(80, 24))
+    private val rawModeEnabled    = new AtomicBoolean(false)
+
+    override def writer(): PrintWriter = testWriter
+
+    override def getSize(): Size = terminalSize.get()
+
+    def setSize(cols: Int, rows: Int): Unit =
+      terminalSize.set(new Size(cols, rows))
+
+    def getOutput: String = outputBuffer.toString
+
+    def clearOutput(): Unit =
+      outputBuffer.getBuffer.setLength(0)
+
+    override def getAttributes(): Attributes = attributes.get()
+
+    override def setAttributes(attrs: Attributes): Unit =
+      attributes.set(attrs)
+
+    override def input(): InputStream = inputStream
+
+    override def output(): OutputStream = outputStream
+
+    override def reader(): NonBlockingReader = nonBlockingReader
+
+    override def setSize(size: Size): Unit =
+      terminalSize.set(size)
+
+    override def getProvider(): TerminalProvider =
+      TestTerminal.provider
+
+    override def getSystemStream(): SystemStream =
+      SystemStream.Output
+
+    override def enterRawMode(): Attributes =
+      rawModeEnabled.set(true)
+      getAttributes()
+
+    def isRawModeEnabled: Boolean = rawModeEnabled.get()
+
+  object TestTerminal:
+    private val provider: TerminalProvider = new TerminalProvider:
+      override def name(): String = "test"
+
+      override def sysTerminal(
+        name: String,
+        `type`: String,
+        ansiPassThrough: Boolean,
+        encoding: Charset,
+        nativeSignals: Boolean,
+        signalHandler: org.jline.terminal.Terminal.SignalHandler,
+        paused: Boolean,
+        stream: SystemStream,
+      ): org.jline.terminal.Terminal =
+        new TestTerminal
+
+      override def newTerminal(
+        name: String,
+        `type`: String,
+        in: InputStream,
+        out: OutputStream,
+        encoding: Charset,
+        signalHandler: org.jline.terminal.Terminal.SignalHandler,
+        paused: Boolean,
+        attributes: Attributes,
+        size: Size,
+      ): org.jline.terminal.Terminal =
+        new TestTerminal
+
+      override def isSystemStream(stream: SystemStream): Boolean = false
+
+      override def systemStreamName(stream: SystemStream): String = "test"
+
+      override def systemStreamWidth(stream: SystemStream): Int = 0
+
+  // Helper to create a test layer with a TestTerminal
+  def testTerminalLayer: ZLayer[Any, Nothing, (TerminalService, TestTerminal)] =
+    ZLayer.scoped {
+      for
+        terminal <- ZIO.succeed(new TestTerminal)
+        service   = TerminalServiceLive(TerminalConfig.default, terminal)
+        _        <- ZIO.addFinalizer(ZIO.succeed(terminal.close()))
+      yield (service, terminal)
+    }
+
+  // Extract just the service
+  private val liveServiceLayer: ZLayer[Any, Nothing, TerminalService] =
+    testTerminalLayer.map { env =>
+      ZEnvironment(env.get[(TerminalService, TestTerminal)]._1)
+    }
 
   private val testLayer: ZLayer[Any, Nothing, TerminalService] =
     TerminalService.test()
@@ -283,5 +393,246 @@ object TerminalServiceSpec extends ZIOSpecDefault:
           _       <- service.showCursor
         yield assertTrue(true)
       }.provideLayer(TerminalService.test()),
+    ),
+    suite("TerminalServiceLive")(
+      test("render widget writes to terminal") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          widget              <- ZIO.succeed(Widget.text("Hello Live!"))
+          _                   <- service.render(widget)
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("Hello Live!")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("render returns correct RenderResult") {
+        for
+          service <- ZIO.service[TerminalService]
+          widget  <- ZIO.succeed(Widget.text("Test Output"))
+          result  <- service.render(widget)
+        yield assertTrue(
+          result.output == "Test Output",
+          result.charCount == 11,
+          result.lineCount == 1,
+        )
+      }.provideLayer(liveServiceLayer),
+      test("renderAll processes multiple widgets") {
+        for
+          service <- ZIO.service[TerminalService]
+          widgets  = Seq(Widget.text("First"), Widget.text("Second"), Widget.text("Third"))
+          results <- service.renderAll(widgets)
+        yield assertTrue(
+          results.length == 3,
+          results(0).output == "First",
+          results(1).output == "Second",
+          results(2).output == "Third",
+        )
+      }.provideLayer(liveServiceLayer),
+      test("clear writes ANSI clear sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                   <- service.clear
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[2J\u001b[H")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("print writes text without newline") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.print("No newline")
+          output               = terminal.getOutput
+        yield assertTrue(
+          output == "No newline",
+          !output.contains("\n"),
+        )
+      }.provideLayer(testTerminalLayer),
+      test("println writes text with newline") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.println("With newline")
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("With newline"),
+          output.endsWith("\n"),
+        )
+      }.provideLayer(testTerminalLayer),
+      test("size returns terminal dimensions") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.setSize(100, 50)
+          size                <- service.size
+        yield assertTrue(
+          size.width == 100,
+          size.height == 50,
+          size.x == 0,
+          size.y == 0,
+        )
+      }.provideLayer(testTerminalLayer),
+      test("flush completes without error") {
+        for
+          service <- ZIO.service[TerminalService]
+          _       <- service.flush
+        yield assertTrue(true)
+      }.provideLayer(liveServiceLayer),
+      test("setCursor writes ANSI cursor position sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.setCursor(10, 5)
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[6;11H") // ANSI uses 1-based indexing
+        )
+      }.provideLayer(testTerminalLayer),
+      test("hideCursor writes ANSI hide cursor sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.hideCursor
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[?25l")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("showCursor writes ANSI show cursor sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.showCursor
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[?25h")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("enableRawMode activates raw mode") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                   <- service.enableRawMode
+        yield assertTrue(
+          terminal.isRawModeEnabled
+        )
+      }.provideLayer(testTerminalLayer),
+      test("disableRawMode completes without error") {
+        for
+          service <- ZIO.service[TerminalService]
+          _       <- service.enableRawMode
+          _       <- service.disableRawMode
+        yield assertTrue(true)
+      }.provideLayer(liveServiceLayer),
+      test("enterAlternateScreen writes ANSI alternate screen sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.enterAlternateScreen
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[?1049h")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("exitAlternateScreen writes ANSI exit alternate screen sequence") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.exitAlternateScreen
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[?1049l")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("multiple operations write to same terminal") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.clear
+          _                   <- service.hideCursor
+          _                   <- service.setCursor(5, 10)
+          _                   <- service.print("Test")
+          _                   <- service.showCursor
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[2J\u001b[H"), // clear
+          output.contains("\u001b[?25l"),       // hide cursor
+          output.contains("\u001b[11;6H"),      // setCursor
+          output.contains("Test"),              // print
+          output.contains("\u001b[?25h"), // show cursor
+        )
+      }.provideLayer(testTerminalLayer),
+      test("render widget flushes output") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          widget               = Widget.text("Flushed")
+          _                   <- service.render(widget)
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("Flushed")
+        )
+      }.provideLayer(testTerminalLayer),
+      test("renderAll renders widgets in order") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          widgets              = Seq(
+                                   Widget.text("First"),
+                                   Widget.text("Second"),
+                                   Widget.text("Third"),
+                                 )
+          _                   <- service.renderAll(widgets)
+          output               = terminal.getOutput
+          firstIdx             = output.indexOf("First")
+          secondIdx            = output.indexOf("Second")
+          thirdIdx             = output.indexOf("Third")
+        yield assertTrue(
+          firstIdx >= 0,
+          secondIdx >= 0,
+          thirdIdx >= 0,
+          firstIdx < secondIdx,
+          secondIdx < thirdIdx,
+        )
+      }.provideLayer(testTerminalLayer),
+      test("size reflects terminal resize") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          initialSize         <- service.size
+          _                    = terminal.setSize(120, 40)
+          newSize             <- service.size
+        yield assertTrue(
+          initialSize.width == 80,
+          initialSize.height == 24,
+          newSize.width == 120,
+          newSize.height == 40,
+        )
+      }.provideLayer(testTerminalLayer),
+      test("setCursor with zero coordinates") {
+        for
+          (service, terminal) <- ZIO.service[(TerminalService, TestTerminal)]
+          _                    = terminal.clearOutput()
+          _                   <- service.setCursor(0, 0)
+          output               = terminal.getOutput
+        yield assertTrue(
+          output.contains("\u001b[1;1H") // 1-based indexing
+        )
+      }.provideLayer(testTerminalLayer),
+      test("render empty widget") {
+        for
+          service <- ZIO.service[TerminalService]
+          widget   = Widget.text("")
+          result  <- service.render(widget)
+        yield assertTrue(
+          result.output.isEmpty,
+          result.charCount == 0,
+        )
+      }.provideLayer(liveServiceLayer),
+      test("renderAll with empty sequence") {
+        for
+          service <- ZIO.service[TerminalService]
+          results <- service.renderAll(Seq.empty)
+        yield assertTrue(
+          results.isEmpty
+        )
+      }.provideLayer(liveServiceLayer),
     ),
   ).provideLayerShared(testLayer)
