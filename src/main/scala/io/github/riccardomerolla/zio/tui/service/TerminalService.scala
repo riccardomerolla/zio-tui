@@ -372,8 +372,16 @@ object TerminalService:
   /** Test/mock implementation returning predefined results.
     *
     * Useful for testing without actual terminal I/O.
+    *
+    * @param terminalSize
+    *   The terminal size to report (default 80x24)
+    * @param renderResults
+    *   Predefined render results for specific widgets
     */
-  def mock(renderResults: Map[Widget, RenderResult] = Map.empty): ULayer[TerminalService] =
+  def test(
+    terminalSize: Rect = Rect.fromSize(80, 24),
+    renderResults: Map[Widget, RenderResult] = Map.empty,
+  ): ULayer[TerminalService] =
     ZLayer.succeed(new TerminalService:
       override def render(widget: Widget): IO[TUIError, RenderResult] =
         ZIO.succeed(
@@ -393,7 +401,7 @@ object TerminalService:
         ZIO.unit
 
       override def size: UIO[Rect] =
-        ZIO.succeed(Rect.fromSize(80, 24))
+        ZIO.succeed(terminalSize)
 
       override def flush: IO[TUIError, Unit] =
         ZIO.unit
@@ -417,11 +425,5 @@ object TerminalService:
         ZIO.unit
 
       override def exitAlternateScreen: IO[TUIError, Unit] =
-        ZIO.unit)
-
-  /** Test/mock implementation returning predefined results.
-    *
-    * Useful for testing without actual terminal I/O.
-    */
-  def test(renderResults: Map[Widget, RenderResult] = Map.empty): ULayer[TerminalService] =
-    mock(renderResults)
+        ZIO.unit
+    )

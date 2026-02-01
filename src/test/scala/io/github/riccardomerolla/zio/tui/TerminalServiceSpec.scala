@@ -18,7 +18,7 @@ import io.github.riccardomerolla.zio.tui.service.TerminalService
 object TerminalServiceSpec extends ZIOSpecDefault:
 
   private val testLayer: ZLayer[Any, Nothing, TerminalService] =
-    TerminalService.mock()
+    TerminalService.test()
 
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("TerminalService")(
     test("renders text widget successfully") {
