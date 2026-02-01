@@ -92,6 +92,22 @@ trait TerminalService:
     */
   def showCursor: IO[TUIError, Unit]
 
+  /** Enable raw mode (no line buffering, no echo).
+    *
+    * Must be paired with disableRawMode for cleanup.
+    *
+    * @return
+    *   Effect that enables raw mode
+    */
+  def enableRawMode: IO[TUIError, Unit]
+
+  /** Disable raw mode, restoring normal terminal behavior.
+    *
+    * @return
+    *   Effect that disables raw mode
+    */
+  def disableRawMode: IO[TUIError, Unit]
+
 /** Live implementation of TerminalService using stdout.
   */
 final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
@@ -190,6 +206,28 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
       )
     }
 
+  override def enableRawMode: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // Placeholder - will be implemented with JLine Terminal
+      ()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "enableRawMode",
+        cause = throwable.getMessage,
+      )
+    }
+
+  override def disableRawMode: IO[TUIError, Unit] =
+    ZIO.attempt {
+      // Placeholder - will be implemented with JLine Terminal
+      ()
+    }.mapError { throwable =>
+      TUIError.IOError(
+        operation = "disableRawMode",
+        cause = throwable.getMessage,
+      )
+    }
+
 object TerminalService:
   /** Access the TerminalService from the environment and render a widget.
     *
@@ -260,6 +298,12 @@ object TerminalService:
         ZIO.unit
 
       override def showCursor: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def enableRawMode: IO[TUIError, Unit] =
+        ZIO.unit
+
+      override def disableRawMode: IO[TUIError, Unit] =
         ZIO.unit)
 
   /** Test/mock implementation returning predefined results.

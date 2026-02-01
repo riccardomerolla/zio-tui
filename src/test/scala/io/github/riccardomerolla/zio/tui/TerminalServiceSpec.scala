@@ -129,4 +129,14 @@ object TerminalServiceSpec extends ZIOSpecDefault:
         _ <- ZIO.serviceWithZIO[TerminalService](_.showCursor)
       yield assertTrue(true)
     }.provideLayer(TerminalService.test()),
+    test("enableRawMode succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.enableRawMode)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
+    test("disableRawMode succeeds") {
+      for
+        _ <- ZIO.serviceWithZIO[TerminalService](_.disableRawMode)
+      yield assertTrue(true)
+    }.provideLayer(TerminalService.test()),
   ).provideLayerShared(testLayer)
