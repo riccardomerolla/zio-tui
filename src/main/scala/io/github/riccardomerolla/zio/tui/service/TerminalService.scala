@@ -126,11 +126,16 @@ trait TerminalService:
 
 /** Live implementation of TerminalService using stdout.
   */
-final case class TerminalServiceLive(config: TerminalConfig) extends TerminalService:
+final case class TerminalServiceLive(
+  config: TerminalConfig,
+  terminal: org.jline.terminal.Terminal,
+) extends TerminalService:
 
   override def render(widget: Widget): IO[TUIError, RenderResult] =
     ZIO.attempt {
       val output = widget.render
+      terminal.writer().print(output)
+      terminal.flush()
       RenderResult.fromString(output)
     }.mapError { throwable =>
       TUIError.RenderingFailed(
@@ -144,8 +149,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def clear: IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code to clear screen
-      scala.Console.print("\u001b[2J\u001b[H")
+      val writer = terminal.writer()
+      writer.print("\u001b[2J\u001b[H")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "clear",
@@ -155,7 +161,8 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def print(text: String): IO[TUIError, Unit] =
     ZIO.attempt {
-      scala.Console.print(text)
+      terminal.writer().print(text)
+      terminal.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "print",
@@ -165,7 +172,8 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def println(text: String): IO[TUIError, Unit] =
     ZIO.attempt {
-      scala.Console.println(text)
+      terminal.writer().println(text)
+      terminal.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "println",
@@ -174,11 +182,14 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
     }
 
   override def size: UIO[Rect] =
-    ZIO.succeed(Rect.fromSize(config.width, config.height))
+    ZIO.succeed {
+      val termSize = terminal.getSize()
+      Rect.fromSize(termSize.getColumns(), termSize.getRows())
+    }
 
   override def flush: IO[TUIError, Unit] =
     ZIO.attempt {
-      scala.Console.flush()
+      terminal.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "flush",
@@ -188,9 +199,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def setCursor(x: Int, y: Int): IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code: ESC[{row};{col}H (1-based indexing)
-      scala.Console.print(s"\u001b[${y + 1};${x + 1}H")
-      scala.Console.flush()
+      val writer = terminal.writer()
+      writer.print(s"\u001b[${y + 1};${x + 1}H")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "setCursor",
@@ -200,9 +211,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def hideCursor: IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code: ESC[?25l
-      scala.Console.print("\u001b[?25l")
-      scala.Console.flush()
+      val writer = terminal.writer()
+      writer.print("\u001b[?25l")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "hideCursor",
@@ -212,9 +223,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def showCursor: IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code: ESC[?25h
-      scala.Console.print("\u001b[?25h")
-      scala.Console.flush()
+      val writer = terminal.writer()
+      writer.print("\u001b[?25h")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "showCursor",
@@ -224,7 +235,7 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def enableRawMode: IO[TUIError, Unit] =
     ZIO.attempt {
-      // Placeholder - will be implemented with JLine Terminal
+      terminal.enterRawMode()
       ()
     }.mapError { throwable =>
       TUIError.IOError(
@@ -235,8 +246,10 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def disableRawMode: IO[TUIError, Unit] =
     ZIO.attempt {
-      // Placeholder - will be implemented with JLine Terminal
-      ()
+      val attributes = terminal.getAttributes()
+      attributes.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ICANON, true)
+      attributes.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ECHO, true)
+      terminal.setAttributes(attributes)
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "disableRawMode",
@@ -246,9 +259,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def enterAlternateScreen: IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code: ESC[?1049h
-      scala.Console.print("\u001b[?1049h")
-      scala.Console.flush()
+      val writer = terminal.writer()
+      writer.print("\u001b[?1049h")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "enterAlternateScreen",
@@ -258,9 +271,9 @@ final case class TerminalServiceLive(config: TerminalConfig) extends TerminalSer
 
   override def exitAlternateScreen: IO[TUIError, Unit] =
     ZIO.attempt {
-      // ANSI escape code: ESC[?1049l
-      scala.Console.print("\u001b[?1049l")
-      scala.Console.flush()
+      val writer = terminal.writer()
+      writer.print("\u001b[?1049l")
+      writer.flush()
     }.mapError { throwable =>
       TUIError.IOError(
         operation = "exitAlternateScreen",
