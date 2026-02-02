@@ -2,6 +2,7 @@ package io.github.riccardomerolla.zio.tui.subscriptions
 
 import zio.*
 import zio.stream.*
+
 import io.github.riccardomerolla.zio.tui.error.TUIError
 
 /** Factory methods for creating ZIO Stream-based subscriptions.
@@ -25,8 +26,8 @@ object ZSub:
 
   /** Create a subscription that emits Unit at regular intervals.
     *
-    * Useful for periodic tasks like refreshing data, updating clocks, or polling external state. The stream never
-    * fails and emits infinitely until interrupted.
+    * Useful for periodic tasks like refreshing data, updating clocks, or polling external state. The stream never fails
+    * and emits infinitely until interrupted.
     *
     * Backpressure: Natural rate limiting via the fixed schedule ensures bounded production.
     *
@@ -49,8 +50,7 @@ object ZSub:
     * emissions from any stream appear in the merged output. The merged stream fails if any input stream fails and
     * completes when all input streams complete.
     *
-    * Backpressure: Uses ZStream's built-in backpressure handling (16-element default buffer) across all merged
-    * streams.
+    * Backpressure: Uses ZStream's built-in backpressure handling (16-element default buffer) across all merged streams.
     *
     * @param subs
     *   Variable number of streams to merge
@@ -73,8 +73,8 @@ object ZSub:
   /** Watch a file for changes and emit its content.
     *
     * Polls the file at regular intervals (100ms) and emits the file content whenever it changes. Uses MD5 hashing to
-    * efficiently detect changes without comparing full content. The stream fails if the file doesn't exist or cannot
-    * be read.
+    * efficiently detect changes without comparing full content. The stream fails if the file doesn't exist or cannot be
+    * read.
     *
     * Implementation uses simple polling for cross-platform compatibility rather than OS-native file watching.
     *
@@ -99,27 +99,21 @@ object ZSub:
       yield ZStream
         .repeatWithSchedule(ZIO.unit, Schedule.fixed(100.millis))
         .mapZIO { _ =>
-          (for
-            content <- ZIO.attempt {
-                        val filePath = java.nio.file.Paths.get(path)
-                        if !java.nio.file.Files.exists(filePath) then
-                          throw new java.io.FileNotFoundException(path)
-                        java.nio.file.Files.readString(filePath)
-                      }.mapError {
-                        case _: java.io.FileNotFoundException =>
-                          TUIError.FileNotFound(path)
-                        case e: Throwable =>
-                          TUIError.IOError(s"Failed to read file: $path", e.getMessage)
-                      }
+          for
+            exists  <- ZIO.attempt(java.nio.file.Files.exists(java.nio.file.Paths.get(path)))
+                         .mapError(e => TUIError.IOError(s"Failed to check file: $path", e.getMessage))
+            _       <- ZIO.when(!exists)(ZIO.fail(TUIError.FileNotFound(path)))
+            content <- ZIO.attempt(java.nio.file.Files.readString(java.nio.file.Paths.get(path)))
+                         .mapError(e => TUIError.IOError(s"Failed to read file: $path", e.getMessage))
             hash    <- ZIO.succeed {
-                        val md = java.security.MessageDigest.getInstance("MD5")
-                        md.digest(content.getBytes).map("%02x".format(_)).mkString
-                      }
+                         val md = java.security.MessageDigest.getInstance("MD5")
+                         md.digest(content.getBytes).map("%02x".format(_)).mkString
+                       }
             changed <- lastHashRef.modify { lastHash =>
-                        val hasChanged = lastHash.forall(_ != hash)
-                        (hasChanged, Some(hash))
-                      }
-          yield if changed then Some(content) else None)
+                         val hasChanged = lastHash.forall(_ != hash)
+                         (hasChanged, Some(hash))
+                       }
+          yield if changed then Some(content) else None
         }
         .collectSome
     }

@@ -1,12 +1,14 @@
 package io.github.riccardomerolla.zio.tui.subscriptions
 
-import io.github.riccardomerolla.zio.tui.error.TUIError
+import zio.Scope
 import zio.test.*
 import zio.test.Assertion.*
 
+import io.github.riccardomerolla.zio.tui.error.TUIError
+
 object SubscriptionErrorSpec extends ZIOSpecDefault:
 
-  def spec = suite("SubscriptionError")(
+  def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("SubscriptionError")(
     suite("FileNotFound")(
       test("stores the file path") {
         val error = SubscriptionError.FileNotFound("/path/to/file")
@@ -42,10 +44,10 @@ object SubscriptionErrorSpec extends ZIOSpecDefault:
     suite("pattern matching")(
       test("can match on FileNotFound") {
         val error: TUIError = SubscriptionError.FileNotFound("/missing")
-        val result = error match
+        val result          = error match
           case TUIError.FileNotFound(path) => s"not found: $path"
           case _                           => "other"
         assertTrue(result == "not found: /missing")
-      },
+      }
     ),
   )

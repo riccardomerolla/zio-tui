@@ -83,14 +83,14 @@ object PackageSpec extends ZIOSpecDefault:
       assertTrue(key.isInstanceOf[Key])
     },
     test("Key companion object is exported") {
-      val char = Key.Character('q')
-      val ctrl = Key.Control('c')
+      val char  = Key.Character('q')
+      val ctrl  = Key.Control('c')
       val enter = Key.Enter
       assertTrue(char != ctrl && char != enter)
     },
     test("ZSub object is exported") {
       val stream = ZSub.tick(zio.Duration.fromSeconds(1))
-      assertTrue(stream != null)
+      assertTrue(stream.isInstanceOf[zio.stream.ZStream[?, ?, ?]])
     },
     test("SubscriptionError type alias is exported") {
       val error: TUIError = SubscriptionError.FileNotFound("/missing")

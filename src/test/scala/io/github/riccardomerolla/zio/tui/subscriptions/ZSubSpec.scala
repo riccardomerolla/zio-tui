@@ -2,13 +2,12 @@ package io.github.riccardomerolla.zio.tui.subscriptions
 
 import zio.*
 import zio.stream.*
-import zio.test.*
 import zio.test.Assertion.*
-import zio.test.TestClock
+import zio.test.{ TestClock, * }
 
 object ZSubSpec extends ZIOSpecDefault:
 
-  def spec = suite("ZSub")(
+  def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("ZSub")(
     suite("tick")(
       test("emits at regular intervals") {
         for
@@ -76,7 +75,7 @@ object ZSubSpec extends ZIOSpecDefault:
           result <- ZSub.watchFile("/nonexistent/file.txt").runHead.either
         yield assertTrue(result match
           case Left(_: io.github.riccardomerolla.zio.tui.error.TUIError.FileNotFound) => true
-          case _ => false)
+          case _                                                                      => false)
       },
       test("emits file content") {
         val testFile = "/tmp/test-watch-content.txt"
@@ -84,7 +83,7 @@ object ZSubSpec extends ZIOSpecDefault:
         for
           _      <- ZIO.attempt(java.nio.file.Files.writeString(
                       java.nio.file.Paths.get(testFile),
-                      "test content"
+                      "test content",
                     ))
           result <- ZSub.watchFile(testFile).runHead
           _      <- ZIO.attempt(java.nio.file.Files.deleteIfExists(

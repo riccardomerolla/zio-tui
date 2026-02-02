@@ -1,11 +1,12 @@
 package io.github.riccardomerolla.zio.tui.subscriptions
 
+import zio.Scope
 import zio.test.*
 import zio.test.Assertion.*
 
 object KeySpec extends ZIOSpecDefault:
 
-  def spec = suite("Key")(
+  def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("Key")(
     suite("Character")(
       test("wraps a regular character") {
         val key = Key.Character('a')
@@ -26,7 +27,7 @@ object KeySpec extends ZIOSpecDefault:
         assertTrue(key match
           case Key.Special("ArrowUp") => true
           case _                      => false)
-      },
+      }
     ),
     suite("Control")(
       test("wraps control characters") {
@@ -34,7 +35,7 @@ object KeySpec extends ZIOSpecDefault:
         assertTrue(key match
           case Key.Control('c') => true
           case _                => false)
-      },
+      }
     ),
     suite("case objects")(
       test("Enter is a singleton") {
@@ -53,21 +54,21 @@ object KeySpec extends ZIOSpecDefault:
     suite("pattern matching")(
       test("can match on Character") {
         val key: Key = Key.Character('q')
-        val result = key match
+        val result   = key match
           case Key.Character('q') => "quit"
           case _                  => "other"
         assertTrue(result == "quit")
       },
       test("can match on Control") {
         val key: Key = Key.Control('c')
-        val result = key match
+        val result   = key match
           case Key.Control('c') => "interrupt"
           case _                => "other"
         assertTrue(result == "interrupt")
       },
       test("can match on case objects") {
         val key: Key = Key.Enter
-        val result = key match
+        val result   = key match
           case Key.Enter => "submit"
           case _         => "other"
         assertTrue(result == "submit")
