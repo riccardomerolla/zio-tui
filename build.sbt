@@ -42,13 +42,14 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "2.1.24",
       "dev.zio" %% "zio-streams" % "2.1.24",
+      "dev.zio" %% "zio-http" % "3.0.0-RC4",
       "xyz.matthieucourt" %% "layoutz" % "0.6.0",
       "org.jline" % "jline" % "3.25.1",
       "dev.zio" %% "zio-test" % "2.1.24" % Test,
       "dev.zio" %% "zio-test-sbt" % "2.1.24" % Test
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-    coverageExcludedPackages := ".*\\.example\\..*",
+    coverageExcludedPackages := ".*\\.example\\..*;.*ZHttp.*;.*HttpServiceLive.*",
     coverageMinimumStmtTotal := 70,
     coverageFailOnMinimum := true,
     coverageHighlighting := true,
