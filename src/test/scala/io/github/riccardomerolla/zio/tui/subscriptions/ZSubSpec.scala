@@ -70,4 +70,27 @@ object ZSubSpec extends ZIOSpecDefault:
         yield assertTrue(result.size == 4 && result.toSet == Set(1, 2, 3, 4))
       },
     ),
+    suite("watchFile")(
+      test("fails with FileNotFound for missing file") {
+        for
+          result <- ZSub.watchFile("/nonexistent/file.txt").runHead.either
+        yield assertTrue(result match
+          case Left(_: io.github.riccardomerolla.zio.tui.error.TUIError.FileNotFound) => true
+          case _ => false)
+      },
+      test("emits file content") {
+        val testFile = "/tmp/test-watch-content.txt"
+
+        for
+          _      <- ZIO.attempt(java.nio.file.Files.writeString(
+                      java.nio.file.Paths.get(testFile),
+                      "test content"
+                    ))
+          result <- ZSub.watchFile(testFile).runHead
+          _      <- ZIO.attempt(java.nio.file.Files.deleteIfExists(
+                      java.nio.file.Paths.get(testFile)
+                    ))
+        yield assertTrue(result.contains("test content"))
+      },
+    ),
   )

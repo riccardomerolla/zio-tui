@@ -2,6 +2,7 @@ package io.github.riccardomerolla.zio.tui.subscriptions
 
 import zio.*
 import zio.stream.*
+import io.github.riccardomerolla.zio.tui.error.TUIError
 
 /** Factory methods for creating ZIO Stream-based subscriptions.
   *
@@ -68,3 +69,57 @@ object ZSub:
   def merge[R, E, Msg](subs: ZStream[R, E, Msg]*): ZStream[R, E, Msg] =
     if subs.isEmpty then ZStream.empty
     else ZStream.mergeAll(subs.size)(subs*)
+
+  /** Watch a file for changes and emit its content.
+    *
+    * Polls the file at regular intervals (100ms) and emits the file content whenever it changes. Uses MD5 hashing to
+    * efficiently detect changes without comparing full content. The stream fails if the file doesn't exist or cannot
+    * be read.
+    *
+    * Implementation uses simple polling for cross-platform compatibility rather than OS-native file watching.
+    *
+    * Backpressure: Polling rate (100ms) naturally bounds production rate.
+    *
+    * @param path
+    *   Path to the file to watch
+    * @return
+    *   A stream that emits file content on changes
+    *
+    * @example
+    *   {{{
+    * ZSub.watchFile("config.json")
+    *   .map(content => Msg.ConfigChanged(content))
+    *   .catchAll(err => ZStream.succeed(Msg.Error(err)))
+    *   }}}
+    */
+  def watchFile(path: String): ZStream[Any, TUIError, String] =
+    ZStream.unwrap {
+      for
+        lastHashRef <- Ref.make[Option[String]](None)
+      yield ZStream
+        .repeatWithSchedule(ZIO.unit, Schedule.fixed(100.millis))
+        .mapZIO { _ =>
+          (for
+            content <- ZIO.attempt {
+                        val filePath = java.nio.file.Paths.get(path)
+                        if !java.nio.file.Files.exists(filePath) then
+                          throw new java.io.FileNotFoundException(path)
+                        java.nio.file.Files.readString(filePath)
+                      }.mapError {
+                        case _: java.io.FileNotFoundException =>
+                          TUIError.FileNotFound(path)
+                        case e: Throwable =>
+                          TUIError.IOError(s"Failed to read file: $path", e.getMessage)
+                      }
+            hash    <- ZIO.succeed {
+                        val md = java.security.MessageDigest.getInstance("MD5")
+                        md.digest(content.getBytes).map("%02x".format(_)).mkString
+                      }
+            changed <- lastHashRef.modify { lastHash =>
+                        val hasChanged = lastHash.forall(_ != hash)
+                        (hasChanged, Some(hash))
+                      }
+          yield if changed then Some(content) else None)
+        }
+        .collectSome
+    }
