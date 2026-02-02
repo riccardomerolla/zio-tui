@@ -73,3 +73,12 @@ package object tui:
 
   type Method = http.domain.Method
   val Method: io.github.riccardomerolla.zio.tui.http.domain.Method.type = http.domain.Method
+
+  // Subscriptions types
+  type Key = subscriptions.Key
+  val Key: subscriptions.Key.type = subscriptions.Key
+
+  val ZSub: subscriptions.ZSub.type = subscriptions.ZSub
+
+  type SubscriptionError = subscriptions.SubscriptionError
+  val SubscriptionError: subscriptions.SubscriptionError.type = subscriptions.SubscriptionError
