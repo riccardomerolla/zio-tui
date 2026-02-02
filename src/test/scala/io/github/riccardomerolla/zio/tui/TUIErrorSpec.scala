@@ -111,6 +111,8 @@ object TUIErrorSpec extends ZIOSpecDefault:
           case TUIError.TerminalClosed             => "closed"
           case TUIError.InvalidDimensions(_, _, _) => "dimensions"
           case TUIError.IOError(_, _)              => "io"
+          case TUIError.FileNotFound(_)            => "file-not-found"
+          case TUIError.TerminalReadError(_)       => "terminal-read-error"
         }
 
         assertTrue(
