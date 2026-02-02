@@ -1,8 +1,8 @@
 package io.github.riccardomerolla.zio.tui.http.domain
 
+import zio.Scope
 import zio.test.*
 import zio.test.Assertion.*
-import zio.Scope
 
 object HttpResponseSpec extends ZIOSpecDefault:
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("HttpResponse")(
