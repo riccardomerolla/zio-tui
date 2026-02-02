@@ -41,3 +41,30 @@ object ZSub:
     */
   def tick(interval: Duration): ZStream[Any, Nothing, Unit] =
     ZStream.repeatWithSchedule(ZIO.unit, Schedule.fixed(interval))
+
+  /** Merge multiple subscriptions into a single stream.
+    *
+    * Combines multiple subscription streams, interleaving their emissions. All input streams run concurrently, and
+    * emissions from any stream appear in the merged output. The merged stream fails if any input stream fails and
+    * completes when all input streams complete.
+    *
+    * Backpressure: Uses ZStream's built-in backpressure handling (16-element default buffer) across all merged
+    * streams.
+    *
+    * @param subs
+    *   Variable number of streams to merge
+    * @return
+    *   A stream that emits values from all input streams
+    *
+    * @example
+    *   {{{
+    * ZSub.merge(
+    *   ZSub.tick(1.second).map(_ => Msg.Tick),
+    *   ZSub.keyPress(handler),
+    *   ZSub.watchFile("config.json").map(Msg.ConfigChanged)
+    * )
+    *   }}}
+    */
+  def merge[R, E, Msg](subs: ZStream[R, E, Msg]*): ZStream[R, E, Msg] =
+    if subs.isEmpty then ZStream.empty
+    else ZStream.mergeAll(subs.size)(subs*)

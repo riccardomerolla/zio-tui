@@ -1,6 +1,7 @@
 package io.github.riccardomerolla.zio.tui.subscriptions
 
 import zio.*
+import zio.stream.*
 import zio.test.*
 import zio.test.Assertion.*
 import zio.test.TestClock
@@ -29,6 +30,44 @@ object ZSubSpec extends ZIOSpecDefault:
           _      <- TestClock.adjust(4.seconds)
           result <- fiber.join
         yield assertTrue(result.size == 2)
+      },
+    ),
+    suite("merge")(
+      test("combines multiple streams") {
+        val stream1 = ZStream(1, 2, 3)
+        val stream2 = ZStream(4, 5, 6)
+        val stream3 = ZStream(7, 8, 9)
+
+        for
+          result <- ZSub.merge(stream1, stream2, stream3).runCollect
+        yield assertTrue(result.sorted == Chunk(1, 2, 3, 4, 5, 6, 7, 8, 9))
+      },
+      test("handles empty stream list") {
+        for
+          result <- ZSub.merge[Any, Nothing, Int]().runCollect
+        yield assertTrue(result.isEmpty)
+      },
+      test("handles single stream") {
+        val stream = ZStream(1, 2, 3)
+        for
+          result <- ZSub.merge(stream).runCollect
+        yield assertTrue(result == Chunk(1, 2, 3))
+      },
+      test("preserves error type") {
+        val stream1: ZStream[Any, String, Int] = ZStream.fail("error1")
+        val stream2: ZStream[Any, String, Int] = ZStream(1, 2)
+
+        for
+          result <- ZSub.merge(stream1, stream2).runCollect.either
+        yield assertTrue(result.isLeft)
+      },
+      test("interleaves emissions from multiple sources") {
+        val stream1 = ZStream(1, 2)
+        val stream2 = ZStream(3, 4)
+
+        for
+          result <- ZSub.merge(stream1, stream2).runCollect
+        yield assertTrue(result.size == 4 && result.toSet == Set(1, 2, 3, 4))
       },
     ),
   )
