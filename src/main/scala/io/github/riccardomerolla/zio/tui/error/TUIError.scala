@@ -45,3 +45,17 @@ enum TUIError:
     *   The underlying exception or reason
     */
   case IOError(operation: String, cause: String)
+
+  /** File was not found during subscription operation.
+    *
+    * @param path
+    *   The path to the file that was not found
+    */
+  case FileNotFound(path: String)
+
+  /** Terminal read operation failed.
+    *
+    * @param cause
+    *   The underlying exception
+    */
+  case TerminalReadError(cause: Throwable)

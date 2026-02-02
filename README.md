@@ -34,6 +34,31 @@ object HelloTUI extends ZIOAppDefault:
     yield ()
 ```
 
+### Subscriptions
+
+ZSub provides helpers for common subscription patterns:
+
+```scala
+import io.github.riccardomerolla.zio.tui.*
+import zio.stream.*
+
+def subscriptions(state: State): ZStream[Any, TUIError, Msg] =
+  ZSub.merge(
+    // Timer ticks
+    ZSub.tick(1.second).map(_ => Msg.Tick),
+
+    // File watching
+    ZSub.watchFile("config.json")
+      .map(content => Msg.ConfigChanged(content))
+      .catchAll(err => ZStream.succeed(Msg.Error(err)))
+  )
+```
+
+Available subscriptions:
+- `ZSub.tick(interval)` - Emit at regular intervals
+- `ZSub.watchFile(path)` - Monitor file changes
+- `ZSub.merge(subs*)` - Combine multiple subscriptions
+
 ## Architecture
 
 zio-tui follows effect-oriented programming principles:
