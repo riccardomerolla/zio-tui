@@ -55,3 +55,21 @@ package object tui:
 
   type TUIError = error.TUIError
   val TUIError: io.github.riccardomerolla.zio.tui.error.TUIError.type = error.TUIError
+
+  // HTTP integration types
+  type HttpService = http.HttpService
+  val HttpService: io.github.riccardomerolla.zio.tui.http.HttpService.type = http.HttpService
+
+  val ZHttp: io.github.riccardomerolla.zio.tui.http.ZHttp.type = http.ZHttp
+
+  type HttpRequest = http.domain.HttpRequest
+  val HttpRequest: io.github.riccardomerolla.zio.tui.http.domain.HttpRequest.type = http.domain.HttpRequest
+
+  type HttpResponse = http.domain.HttpResponse
+  val HttpResponse: io.github.riccardomerolla.zio.tui.http.domain.HttpResponse.type = http.domain.HttpResponse
+
+  type HttpError = http.domain.HttpError
+  val HttpError: io.github.riccardomerolla.zio.tui.http.domain.HttpError.type = http.domain.HttpError
+
+  type Method = http.domain.Method
+  val Method: io.github.riccardomerolla.zio.tui.http.domain.Method.type = http.domain.Method
