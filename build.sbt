@@ -53,4 +53,7 @@ lazy val root = (project in file("."))
     coverageMinimumStmtTotal := 70,
     coverageFailOnMinimum := true,
     coverageHighlighting := true,
+    // Enable forking and stdin connection for interactive TUI apps
+    run / fork := true,
+    run / connectInput := true,
   )
