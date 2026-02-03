@@ -71,31 +71,40 @@ object CounterApp extends ZIOAppDefault:
     ): ZIO[Any & Scope, Nothing, Unit] =
       ZIO.unit // Placeholder - full implementation would integrate with layoutz runtime
 
-  /** Demo application entry point.
+  /** Interactive TUI application entry point.
     *
-    * Demonstrates the Elm Architecture pattern by simulating a sequence of messages and showing how the state and view
-    * update in response.
+    * Runs a real interactive counter that responds to keyboard input and updates the display in place.
     */
   def run: ZIO[Any, Nothing, Unit] =
+    def clearScreen: ZIO[Any, Nothing, Unit] =
+      Console.print("\u001b[2J\u001b[H").orDie
+
+    def renderView(state: CounterState): ZIO[Any, Nothing, Unit] =
+      val app = new CounterApp
+      for
+        _ <- Console.print("\u001b[H").orDie // Move cursor to top
+        _ <- Console.printLine(app.view(state).render).orDie
+      yield ()
+
+    def eventLoop(state: CounterState): ZIO[Any, Nothing, Unit] =
+      val app = new CounterApp
+      app.subscriptions(state).take(1).runHead.flatMap {
+        case Some(CounterMsg.Quit) =>
+          clearScreen *> Console.printLine("Goodbye!").orDie
+        case Some(msg)             =>
+          for
+            (newState, _) <- app.update(msg, state)
+            _             <- renderView(newState)
+            _             <- eventLoop(newState)
+          yield ()
+        case None                  =>
+          eventLoop(state)
+      }
+
     for
       app               <- ZIO.succeed(new CounterApp)
       (initialState, _) <- app.init
-      _                 <- Console.printLine(s"\nInitial view:\n${app.view(initialState).render}").orDie
-      _                 <- ZIO.sleep(1.second)
-      // Simulate increment
-      (state1, _)       <- app.update(CounterMsg.Increment, initialState)
-      _                 <- Console.printLine(s"\nAfter Increment:\n${app.view(state1).render}").orDie
-      _                 <- ZIO.sleep(1.second)
-      // Simulate increment again
-      (state2, _)       <- app.update(CounterMsg.Increment, state1)
-      _                 <- Console.printLine(s"\nAfter Increment:\n${app.view(state2).render}").orDie
-      _                 <- ZIO.sleep(1.second)
-      // Simulate decrement
-      (state3, _)       <- app.update(CounterMsg.Decrement, state2)
-      _                 <- Console.printLine(s"\nAfter Decrement:\n${app.view(state3).render}").orDie
-      _                 <- ZIO.sleep(1.second)
-      // Simulate reset
-      (state4, _)       <- app.update(CounterMsg.Reset, state3)
-      _                 <- Console.printLine(s"\nAfter Reset:\n${app.view(state4).render}").orDie
-      _                 <- Console.printLine("\nDemo complete! This shows The Elm Architecture pattern in action.").orDie
+      _                 <- clearScreen
+      _                 <- renderView(initialState)
+      _                 <- eventLoop(initialState)
     yield ()
