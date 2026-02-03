@@ -15,8 +15,10 @@ import layoutz.Element
   *   - Message-based updates (Increment, Decrement, Reset, Quit)
   *   - Keyboard subscriptions using ZSub.keyPress
   *   - Pure view rendering
+  *
+  * Run with: sbt "runMain io.github.riccardomerolla.zio.tui.example.CounterApp"
   */
-object CounterApp:
+object CounterApp extends ZIOAppDefault:
 
   case class CounterState(count: Int)
 
@@ -68,3 +70,32 @@ object CounterApp:
       alignment: layoutz.Alignment = layoutz.Alignment.Left,
     ): ZIO[Any & Scope, Nothing, Unit] =
       ZIO.unit // Placeholder - full implementation would integrate with layoutz runtime
+
+  /** Demo application entry point.
+    *
+    * Demonstrates the Elm Architecture pattern by simulating a sequence of messages and showing how the state and view
+    * update in response.
+    */
+  def run: ZIO[Any, Nothing, Unit] =
+    for
+      app               <- ZIO.succeed(new CounterApp)
+      (initialState, _) <- app.init
+      _                 <- Console.printLine(s"\nInitial view:\n${app.view(initialState).render}").orDie
+      _                 <- ZIO.sleep(1.second)
+      // Simulate increment
+      (state1, _)       <- app.update(CounterMsg.Increment, initialState)
+      _                 <- Console.printLine(s"\nAfter Increment:\n${app.view(state1).render}").orDie
+      _                 <- ZIO.sleep(1.second)
+      // Simulate increment again
+      (state2, _)       <- app.update(CounterMsg.Increment, state1)
+      _                 <- Console.printLine(s"\nAfter Increment:\n${app.view(state2).render}").orDie
+      _                 <- ZIO.sleep(1.second)
+      // Simulate decrement
+      (state3, _)       <- app.update(CounterMsg.Decrement, state2)
+      _                 <- Console.printLine(s"\nAfter Decrement:\n${app.view(state3).render}").orDie
+      _                 <- ZIO.sleep(1.second)
+      // Simulate reset
+      (state4, _)       <- app.update(CounterMsg.Reset, state3)
+      _                 <- Console.printLine(s"\nAfter Reset:\n${app.view(state4).render}").orDie
+      _                 <- Console.printLine("\nDemo complete! This shows The Elm Architecture pattern in action.").orDie
+    yield ()

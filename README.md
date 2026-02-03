@@ -71,10 +71,15 @@ The library includes comprehensive examples demonstrating ZIO service patterns:
 
 ### Counter Application
 
-A minimal code example demonstrating The Elm Architecture pattern:
+A minimal example demonstrating The Elm Architecture pattern:
 
 - **[CounterApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/CounterApp.scala)** - Counter demonstrating Model-View-Update pattern, state management, keyboard subscriptions, and pure view rendering in under 50 lines
 - **[CounterAppSpec](src/test/scala/io/github/riccardomerolla/zio/tui/example/CounterAppSpec.scala)** - Comprehensive tests showing how to test ZTuiApp components
+
+Run the demo to see The Elm Architecture in action:
+```bash
+sbt "runMain io.github.riccardomerolla.zio.tui.example.CounterApp"
+```
 
 Study this example to understand how to structure interactive TUI applications with The Elm Architecture.
 
