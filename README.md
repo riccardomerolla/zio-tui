@@ -21,17 +21,57 @@ libraryDependencies += "io.github.riccardomerolla" %% "zio-tui" % "0.1.0"
 
 ## Quick Example
 
+The simplest way to get started is with the **HelloTUIApp** example, which demonstrates the core `ZTuiApp` pattern:
+
 ```scala
 import io.github.riccardomerolla.zio.tui._
+import io.github.riccardomerolla.zio.tui.domain._
 import zio._
+import zio.stream._
+import layoutz.Element
 
-object HelloTUI extends ZIOAppDefault:
-  def run =
-    for
-      terminal <- ZIO.service[TerminalService]
-      widget   <- Widget.text("Hello, ZIO TUI!")
-      _        <- terminal.render(widget)
-    yield ()
+object HelloTUIApp extends ZIOAppDefault:
+  
+  // 1. Define your application state
+  case class State(counter: Int, lastAction: String)
+  
+  // 2. Define messages (events that can happen)
+  sealed trait Msg
+  case object Increment extends Msg
+  case object Decrement extends Msg
+  case object Quit extends Msg
+  
+  // 3. Create your TUI app
+  class HelloApp extends ZTuiApp[Any, Nothing, State, Msg]:
+    
+    // Initialize with starting state
+    def init: ZIO[Any, Nothing, (State, ZCmd[Any, Nothing, Msg])] =
+      ZIO.succeed((State(0, "Started"), ZCmd.none))
+    
+    // Update state in response to messages
+    def update(msg: Msg, state: State): ZIO[Any, Nothing, (State, ZCmd[Any, Nothing, Msg])] =
+      msg match
+        case Increment => ZIO.succeed((state.copy(counter = state.counter + 1), ZCmd.none))
+        case Decrement => ZIO.succeed((state.copy(counter = state.counter - 1), ZCmd.none))
+        case Quit => ZIO.succeed((state, ZCmd.exit))
+    
+    // Subscribe to keyboard events
+    def subscriptions(state: State): ZStream[Any, Nothing, Msg] =
+      // Use ZSub.keyPress for real keyboard handling
+      ZStream.empty
+    
+    // Render the current state
+    def view(state: State): Element =
+      layoutz.section(s"Counter: ${state.counter}")
+  
+  def run = new HelloApp().run()
+```
+
+See [HelloTUIApp.scala](src/main/scala/io/github/riccardomerolla/zio/tui/example/HelloTUIApp.scala) for a fully documented example with keyboard event handling.
+
+Run it with:
+```bash
+sbt run
 ```
 
 ### Subscriptions
@@ -60,6 +100,34 @@ Available subscriptions:
 - `ZSub.merge(subs*)` - Combine multiple subscriptions
 
 ## Examples
+
+### HelloTUIApp - Getting Started
+
+The **[HelloTUIApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/HelloTUIApp.scala)** is the simplest example demonstrating the core concepts of zio-tui:
+
+**What it demonstrates:**
+- ✅ **ZTuiApp trait**: The MVU (Model-View-Update) pattern for TUI applications
+- ✅ **State management**: Immutable state with type-safe updates
+- ✅ **Message handling**: Exhaustive pattern matching on events
+- ✅ **Keyboard events**: Integration with terminal input (via subscriptions)
+- ✅ **Effect-typed operations**: All side effects wrapped in ZIO
+- ✅ **Resource safety**: Automatic cleanup and Scope management
+
+**Architecture:**
+1. **State** - Your application model (immutable data)
+2. **Msg** - Events/actions that can happen (sealed ADT)
+3. **init** - Initialize the starting state
+4. **update** - Transform state in response to messages
+5. **subscriptions** - Stream of external events (keyboard, timers, etc.)
+6. **view** - Render state to UI elements
+
+This pattern ensures:
+- Type-safe state transitions
+- Exhaustive event handling (compiler-checked)
+- Clear separation of concerns
+- Testable business logic
+
+See the file for comprehensive documentation explaining each part in detail.
 
 ### Service Patterns
 

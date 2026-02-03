@@ -23,6 +23,6 @@ object TestHelpers:
   ): ZIO[Any, Nothing, TestResult] =
     test.provideLayer(layer).either.map {
       case Left(error) if assertion(error) => assertTrue(true)
-      case Left(error) => assertTrue(false) // Wrong error
-      case Right(_) => assertTrue(false) // Should have failed
+      case Left(error)                     => assertTrue(false) // Wrong error
+      case Right(_)                        => assertTrue(false) // Should have failed
     }
