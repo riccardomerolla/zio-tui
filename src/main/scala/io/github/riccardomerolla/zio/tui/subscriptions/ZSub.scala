@@ -148,7 +148,11 @@ object ZSub:
         ZIO
           .acquireRelease(
             acquire = ZIO.attemptBlocking {
-              val terminal = org.jline.terminal.TerminalBuilder.terminal()
+              val terminal = org.jline.terminal.TerminalBuilder
+                .builder()
+                .system(true)
+                .jna(true)
+                .build()
               terminal.enterRawMode()
               (terminal, terminal.reader())
             }
