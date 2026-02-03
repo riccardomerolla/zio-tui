@@ -117,3 +117,57 @@ object ZSub:
         }
         .collectSome
     }
+
+  /** Subscribe to keyboard input events.
+    *
+    * Reads keyboard input from stdin using JLine3's NonBlockingReader in raw mode. The handler function maps Key events
+    * to application messages, returning Some(msg) to emit a message or None to ignore the key.
+    *
+    * This is particularly useful for interactive TUI applications that need to respond to keyboard input. The stream
+    * runs continuously until interrupted and automatically handles terminal cleanup.
+    *
+    * Note: This requires TerminalService to be in the environment for raw mode support.
+    *
+    * @param handler
+    *   Function that maps Key events to optional messages
+    * @return
+    *   A stream that emits messages based on keyboard input
+    *
+    * @example
+    *   {{{
+    * def subscriptions(state: State): ZStream[TerminalService, TUIError, Msg] =
+    *   ZSub.keyPress {
+    *     case Key.Character('q') => Some(Msg.Quit)
+    *     case Key.Character('+') => Some(Msg.Increment)
+    *     case Key.Character('-') => Some(Msg.Decrement)
+    *     case _                  => None
+    *   }
+    *   }}}
+    */
+  def keyPress[Msg](handler: Key => Option[Msg]): ZStream[Any, Nothing, Msg] =
+    ZStream.unwrap {
+      ZIO.attempt {
+        val terminal = org.jline.terminal.TerminalBuilder.terminal()
+        terminal.enterRawMode()
+        val reader = terminal.reader()
+
+        ZStream
+          .repeatZIO {
+            ZIO.attempt {
+              val char = reader.read()
+              if char == -1 then None
+              else
+                val key = char.toChar match
+                  case '\n' | '\r' => Key.Enter
+                  case '\u001b'    => Key.Escape
+                  case '\u007f'    => Key.Backspace
+                  case '\t'        => Key.Tab
+                  case c if c.toInt < 32 => Key.Control((c.toInt + 96).toChar)
+                  case c           => Key.Character(c)
+                handler(key)
+            }.catchAll(_ => ZIO.succeed(None))
+          }
+          .collectSome
+          .ensuring(ZIO.succeed(terminal.close()).ignore)
+      }.catchAll(_ => ZIO.succeed(ZStream.empty))
+    }

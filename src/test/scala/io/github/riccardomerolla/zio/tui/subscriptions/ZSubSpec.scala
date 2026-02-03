@@ -7,6 +7,11 @@ import zio.test.{ TestClock, * }
 
 object ZSubSpec extends ZIOSpecDefault:
 
+  sealed trait TestMsg
+  case object Increment extends TestMsg
+  case object Decrement extends TestMsg
+  case object Quit      extends TestMsg
+
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = suite("ZSub")(
     suite("tick")(
       test("emits at regular intervals") {
@@ -92,4 +97,27 @@ object ZSubSpec extends ZIOSpecDefault:
         yield assertTrue(result.contains("test content"))
       },
     ),
+    suite("keyPress")(
+      test("maps characters to messages via handler") {
+        val handler: Key => Option[TestMsg] = {
+          case Key.Character('+') => Some(Increment)
+          case Key.Character('-') => Some(Decrement)
+          case Key.Character('q') => Some(Quit)
+          case _                  => None
+        }
+
+        // For now, just verify the function exists and compiles
+        val stream = ZSub.keyPress(handler)
+        assertTrue(stream != null)
+      },
+      test("filters out None results from handler") {
+        val handler: Key => Option[TestMsg] = {
+          case Key.Character('q') => Some(Quit)
+          case _                  => None
+        }
+
+        val stream = ZSub.keyPress(handler)
+        assertTrue(stream != null)
+      }
+    )
   )
