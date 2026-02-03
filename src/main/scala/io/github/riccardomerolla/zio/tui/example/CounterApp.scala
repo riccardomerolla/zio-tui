@@ -33,7 +33,7 @@ object CounterApp:
 
     def update(
       msg: CounterMsg,
-      state: CounterState
+      state: CounterState,
     ): ZIO[Any, Nothing, (CounterState, ZCmd[Any, Nothing, CounterMsg])] =
       msg match
         case CounterMsg.Increment => ZIO.succeed((CounterState(state.count + 1), ZCmd.none))
@@ -58,13 +58,13 @@ object CounterApp:
         layoutz.Text("Press '+' to increment"),
         layoutz.Text("Press '-' to decrement"),
         layoutz.Text("Press 'r' to reset"),
-        layoutz.Text("Press 'q' to quit")
+        layoutz.Text("Press 'q' to quit"),
       )
 
     def run(
       clearOnStart: Boolean = true,
       clearOnExit: Boolean = true,
       showQuitMessage: Boolean = false,
-      alignment: layoutz.Alignment = layoutz.Alignment.Left
+      alignment: layoutz.Alignment = layoutz.Alignment.Left,
     ): ZIO[Any & Scope, Nothing, Unit] =
       ZIO.unit // Placeholder - full implementation would integrate with layoutz runtime

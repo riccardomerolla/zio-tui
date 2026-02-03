@@ -152,27 +152,29 @@ object ZSub:
               terminal.enterRawMode()
               (terminal, terminal.reader())
             }
-          )(release = { case (terminal, _) =>
-            ZIO.attemptBlocking(terminal.close()).ignore
+          )(release = {
+            case (terminal, _) =>
+              ZIO.attemptBlocking(terminal.close()).ignore
           })
-          .map { case (terminal, reader) =>
-            ZStream
-              .repeatZIO {
-                ZIO.attemptBlocking {
-                  val char = reader.read()
-                  if char == -1 then None
-                  else
-                    val key = char.toChar match
-                      case '\n' | '\r'         => Key.Enter
-                      case '\u001b'            => Key.Escape
-                      case '\u007f'            => Key.Backspace
-                      case '\t'                => Key.Tab
-                      case c if c.toInt < 32   => Key.Control((c.toInt + 96).toChar)
-                      case c                   => Key.Character(c)
-                    handler(key)
-                }.catchAll(_ => ZIO.succeed(None))
-              }
-              .collectSome
+          .map {
+            case (terminal, reader) =>
+              ZStream
+                .repeatZIO {
+                  ZIO.attemptBlocking {
+                    val char = reader.read()
+                    if char == -1 then None
+                    else
+                      val key = char.toChar match
+                        case '\n' | '\r'       => Key.Enter
+                        case '\u001b'          => Key.Escape
+                        case '\u007f'          => Key.Backspace
+                        case '\t'              => Key.Tab
+                        case c if c.toInt < 32 => Key.Control((c.toInt + 96).toChar)
+                        case c                 => Key.Character(c)
+                      handler(key)
+                  }.catchAll(_ => ZIO.succeed(None))
+                }
+                .collectSome
           }
       }.catchAll(_ => ZIO.succeed(ZStream.empty))
     }
