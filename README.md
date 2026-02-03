@@ -69,6 +69,17 @@ The library includes comprehensive examples demonstrating ZIO service patterns:
 - **[DataDashboardApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/DataDashboardApp.scala)** - Multi-service composition example demonstrating horizontal (`++`) and vertical (`>>>`) layer composition
 - **[SERVICE-PATTERNS.md](docs/SERVICE-PATTERNS.md)** - Comprehensive guide to ZIO service patterns with best practices, common mistakes, and real-world examples
 
+### Counter Application
+
+A minimal counter demonstrating The Elm Architecture pattern:
+
+- **[CounterApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/CounterApp.scala)** - Interactive counter with keyboard input showing Model-View-Update pattern, state management, and subscriptions in under 50 lines
+
+Run it with:
+```bash
+sbt "runMain io.github.riccardomerolla.zio.tui.example.CounterApp"
+```
+
 ## Architecture
 
 zio-tui follows effect-oriented programming principles:
