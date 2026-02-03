@@ -86,25 +86,25 @@ object CounterApp extends ZIOAppDefault:
         _ <- Console.printLine(app.view(state).render).orDie
       yield ()
 
-    def eventLoop(state: CounterState): ZIO[Any, Nothing, Unit] =
-      val app = new CounterApp
-      app.subscriptions(state).take(1).runHead.flatMap {
-        case Some(CounterMsg.Quit) =>
-          clearScreen *> Console.printLine("Goodbye!").orDie
-        case Some(msg)             =>
-          for
-            (newState, _) <- app.update(msg, state)
-            _             <- renderView(newState)
-            _             <- eventLoop(newState)
-          yield ()
-        case None                  =>
-          eventLoop(state)
-      }
-
     for
       app               <- ZIO.succeed(new CounterApp)
       (initialState, _) <- app.init
       _                 <- clearScreen
       _                 <- renderView(initialState)
-      _                 <- eventLoop(initialState)
+      stateRef          <- Ref.make(initialState)
+      _                 <- app
+                             .subscriptions(initialState)
+                             .foreach { msg =>
+                               msg match
+                                 case CounterMsg.Quit =>
+                                   clearScreen *> Console.printLine("Goodbye!").orDie *> ZIO.interrupt
+                                 case _               =>
+                                   for
+                                     currentState  <- stateRef.get
+                                     (newState, _) <- app.update(msg, currentState)
+                                     _             <- stateRef.set(newState)
+                                     _             <- renderView(newState)
+                                   yield ()
+                             }
+                             .catchAllCause(_ => ZIO.unit) // Handle interrupt gracefully
     yield ()
