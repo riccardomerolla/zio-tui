@@ -9,8 +9,8 @@ case class DataPoint(timestamp: Long, value: Double, label: String)
 // Typed errors
 enum DataSourceError extends Exception:
   case ConnectionFailed(reason: String) extends DataSourceError
-  case InvalidData(message: String) extends DataSourceError
-  case NotFound(id: String) extends DataSourceError
+  case InvalidData(message: String)     extends DataSourceError
+  case NotFound(id: String)             extends DataSourceError
 
 // Service trait
 trait DataSource:
