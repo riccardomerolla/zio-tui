@@ -56,4 +56,9 @@ lazy val root = (project in file("."))
     // Enable forking and stdin connection for interactive TUI apps
     run / fork := true,
     run / connectInput := true,
+    // Enable native access for JLine3 terminal
+    run / javaOptions ++= Seq(
+      "--enable-native-access=ALL-UNNAMED",
+      "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+    ),
   )
