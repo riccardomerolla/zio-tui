@@ -1,7 +1,8 @@
 package io.github.riccardomerolla.zio.tui.example
 
-import io.github.riccardomerolla.zio.tui.*
 import zio.*
+
+import io.github.riccardomerolla.zio.tui.*
 
 /** Example application demonstrating multi-service composition.
   *
@@ -41,7 +42,8 @@ object DataDashboardApp extends ZIOAppDefault:
   val appLayer: ZLayer[Any, Nothing, DataSource & TerminalService] =
     DataSource.live ++ TerminalService.live
 
-  def run = program.provide(appLayer)
+  def run: ZIO[Environment & (ZIOAppArgs & Scope), Any, Any] =
+    program.provide(appLayer)
 
 // ============================================================================
 // Layer Composition Patterns
