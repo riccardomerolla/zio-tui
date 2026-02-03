@@ -153,15 +153,32 @@ object ZSub:
                 .system(true)
                 .jna(true)
                 .build()
-              terminal.enterRawMode()
-              (terminal, terminal.reader())
+
+              // Save original attributes
+              val originalAttrs = terminal.getAttributes()
+
+              // Configure terminal for raw character input
+              val attrs = new org.jline.terminal.Attributes(originalAttrs)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ICANON, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ECHO, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.IEXTEN, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ISIG, false)
+              attrs.setInputFlag(org.jline.terminal.Attributes.InputFlag.ICRNL, false)
+              attrs.setControlChar(org.jline.terminal.Attributes.ControlChar.VMIN, 1)
+              attrs.setControlChar(org.jline.terminal.Attributes.ControlChar.VTIME, 0)
+              terminal.setAttributes(attrs)
+
+              (terminal, terminal.reader(), originalAttrs)
             }
           )(release = {
-            case (terminal, _) =>
-              ZIO.attemptBlocking(terminal.close()).ignore
+            case (terminal, _, originalAttrs) =>
+              ZIO.attemptBlocking {
+                terminal.setAttributes(originalAttrs)
+                terminal.close()
+              }.ignore
           })
           .map {
-            case (terminal, reader) =>
+            case (terminal, reader, _) =>
               ZStream
                 .repeatZIO {
                   ZIO.attemptBlocking {
