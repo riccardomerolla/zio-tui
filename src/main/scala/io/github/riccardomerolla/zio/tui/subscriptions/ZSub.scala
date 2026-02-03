@@ -126,8 +126,6 @@ object ZSub:
     * This is particularly useful for interactive TUI applications that need to respond to keyboard input. The stream
     * runs continuously until interrupted and automatically handles terminal cleanup.
     *
-    * Note: This requires TerminalService to be in the environment for raw mode support.
-    *
     * @param handler
     *   Function that maps Key events to optional messages
     * @return
@@ -135,7 +133,7 @@ object ZSub:
     *
     * @example
     *   {{{
-    * def subscriptions(state: State): ZStream[TerminalService, TUIError, Msg] =
+    * def subscriptions(state: State): ZStream[Any, Nothing, Msg] =
     *   ZSub.keyPress {
     *     case Key.Character('q') => Some(Msg.Quit)
     *     case Key.Character('+') => Some(Msg.Increment)
@@ -146,28 +144,35 @@ object ZSub:
     */
   def keyPress[Msg](handler: Key => Option[Msg]): ZStream[Any, Nothing, Msg] =
     ZStream.unwrap {
-      ZIO.attempt {
-        val terminal = org.jline.terminal.TerminalBuilder.terminal()
-        terminal.enterRawMode()
-        val reader = terminal.reader()
-
-        ZStream
-          .repeatZIO {
-            ZIO.attempt {
-              val char = reader.read()
-              if char == -1 then None
-              else
-                val key = char.toChar match
-                  case '\n' | '\r' => Key.Enter
-                  case '\u001b'    => Key.Escape
-                  case '\u007f'    => Key.Backspace
-                  case '\t'        => Key.Tab
-                  case c if c.toInt < 32 => Key.Control((c.toInt + 96).toChar)
-                  case c           => Key.Character(c)
-                handler(key)
-            }.catchAll(_ => ZIO.succeed(None))
+      ZIO.scoped {
+        ZIO
+          .acquireRelease(
+            acquire = ZIO.attemptBlocking {
+              val terminal = org.jline.terminal.TerminalBuilder.terminal()
+              terminal.enterRawMode()
+              (terminal, terminal.reader())
+            }
+          )(release = { case (terminal, _) =>
+            ZIO.succeed(terminal.close()).ignore
+          })
+          .map { case (terminal, reader) =>
+            ZStream
+              .repeatZIO {
+                ZIO.attemptBlocking {
+                  val char = reader.read()
+                  if char == -1 then None
+                  else
+                    val key = char.toChar match
+                      case '\n' | '\r'         => Key.Enter
+                      case '\u001b'            => Key.Escape
+                      case '\u007f'            => Key.Backspace
+                      case '\t'                => Key.Tab
+                      case c if c.toInt < 32   => Key.Control((c.toInt + 96).toChar)
+                      case c                   => Key.Character(c)
+                    handler(key)
+                }.catchAll(_ => ZIO.succeed(None))
+              }
+              .collectSome
           }
-          .collectSome
-          .ensuring(ZIO.succeed(terminal.close()).ignore)
       }.catchAll(_ => ZIO.succeed(ZStream.empty))
     }
