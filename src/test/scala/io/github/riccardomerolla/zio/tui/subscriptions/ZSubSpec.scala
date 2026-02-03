@@ -108,7 +108,7 @@ object ZSubSpec extends ZIOSpecDefault:
 
         // For now, just verify the function exists and compiles
         val stream = ZSub.keyPress(handler)
-        assertTrue(stream != null)
+        assertTrue(stream.isInstanceOf[ZStream[Any, Nothing, TestMsg]])
       },
       test("filters out None results from handler") {
         val handler: Key => Option[TestMsg] = {
@@ -117,7 +117,7 @@ object ZSubSpec extends ZIOSpecDefault:
         }
 
         val stream = ZSub.keyPress(handler)
-        assertTrue(stream != null)
-      }
-    )
+        assertTrue(stream.isInstanceOf[ZStream[Any, Nothing, TestMsg]])
+      },
+    ),
   )

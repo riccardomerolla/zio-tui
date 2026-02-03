@@ -25,7 +25,7 @@ object CounterAppSpec extends ZIOSpecDefault:
           increment == CounterMsg.Increment,
           decrement == CounterMsg.Decrement,
           reset == CounterMsg.Reset,
-          quit == CounterMsg.Quit
+          quit == CounterMsg.Quit,
         )
       }
     ),
@@ -36,7 +36,7 @@ object CounterAppSpec extends ZIOSpecDefault:
           (state, cmd) <- app.init
         yield assertTrue(
           state.count == 0,
-          cmd == ZCmd.none
+          cmd == ZCmd.none,
         )
       }
     ),
@@ -47,7 +47,7 @@ object CounterAppSpec extends ZIOSpecDefault:
           (newState, cmd) <- app.update(CounterMsg.Increment, CounterState(5))
         yield assertTrue(
           newState.count == 6,
-          cmd == ZCmd.none
+          cmd == ZCmd.none,
         )
       },
       test("Decrement decreases count by 1") {
@@ -56,7 +56,7 @@ object CounterAppSpec extends ZIOSpecDefault:
           (newState, cmd) <- app.update(CounterMsg.Decrement, CounterState(5))
         yield assertTrue(
           newState.count == 4,
-          cmd == ZCmd.none
+          cmd == ZCmd.none,
         )
       },
       test("Reset sets count to 0") {
@@ -65,7 +65,7 @@ object CounterAppSpec extends ZIOSpecDefault:
           (newState, cmd) <- app.update(CounterMsg.Reset, CounterState(42))
         yield assertTrue(
           newState.count == 0,
-          cmd == ZCmd.none
+          cmd == ZCmd.none,
         )
       },
       test("Quit returns exit command") {
@@ -74,15 +74,15 @@ object CounterAppSpec extends ZIOSpecDefault:
           (newState, cmd) <- app.update(CounterMsg.Quit, CounterState(10))
         yield assertTrue(
           newState.count == 10,
-          cmd == ZCmd.Exit
+          cmd == ZCmd.Exit,
         )
-      }
+      },
     ),
     suite("view")(
       test("renders current count") {
         val app     = new CounterApp
         val element = app.view(CounterState(42))
-        assertTrue(element != null)
+        assertTrue(element.isInstanceOf[layoutz.Element])
       }
-    )
+    ),
   )
