@@ -91,9 +91,7 @@ object HelloTUIAppSpec extends ZIOSpecDefault:
           val app   = new HelloApp
           val state = State(counter = 42, lastAction = "Test")
           val view  = app.view(state)
-          assertTrue(view match
-            case _: Element => true
-            case _          => false)
+          assertTrue(view.isInstanceOf[Element])
         },
         test("view content reflects state") {
           val app    = new HelloApp
@@ -116,9 +114,7 @@ object HelloTUIAppSpec extends ZIOSpecDefault:
             view          = app.view(state3)
           yield assertTrue(
             state3.counter == 1,
-            view match
-              case _: Element => true
-              case _          => false,
+            view.isInstanceOf[Element],
           )
         }
       ),

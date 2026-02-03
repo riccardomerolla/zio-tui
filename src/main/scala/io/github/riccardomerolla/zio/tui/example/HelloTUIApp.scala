@@ -174,9 +174,12 @@ object HelloTUIApp extends ZIOAppDefault:
 
     /** Run method (required by ZTuiApp trait).
       *
-      * In a full implementation, this would orchestrate the MVU feedback loop with a terminal renderer. For this
-      * demonstration, we provide a minimal stub since the actual TUI loop integration would require additional
-      * infrastructure.
+      * This method is the core of a ZTuiApp that orchestrates the complete MVU feedback loop: 1. Initialize state 2.
+      * Render view 3. Subscribe to events 4. Process updates 5. Re-render on changes
+      *
+      * For this pedagogical example, we provide a stub implementation. In a production application, this would
+      * integrate with a terminal service and run the full interactive loop. See the ZTuiApp trait documentation for
+      * details on implementing the full loop.
       */
     def run(
       clearOnStart: Boolean = true,
@@ -184,6 +187,7 @@ object HelloTUIApp extends ZIOAppDefault:
       showQuitMessage: Boolean = false,
       alignment: layoutz.Alignment = layoutz.Alignment.Left,
     ): ZIO[Any & Scope, Nothing, Unit] =
+      // Stub: A full implementation would call the TUI runtime here
       ZIO.unit
 
   // ============================================================================
@@ -192,18 +196,43 @@ object HelloTUIApp extends ZIOAppDefault:
 
   /** Application entry point.
     *
-    * This is where we wire everything together and run the TUI loop.
+    * This demonstrates how to use the HelloApp by showing its structure in action.
+    *
+    * **Important**: This is a pedagogical example focused on demonstrating the ZTuiApp API pattern. It shows: - How to
+    * structure State, Msg, and update logic - How the MVU pattern works conceptually - How to test individual methods
+    *
+    * **For a fully interactive TUI application**, you would:
+    *   1. Implement the `run()` method in HelloApp to integrate with the TUI runtime
+    *   2. Use TerminalService for actual terminal rendering
+    *   3. Connect subscriptions to real keyboard input
+    *   4. Run the complete MVU feedback loop
+    *
+    * See the DataDashboardApp example for a full integration with TerminalService.
     */
   def run: ZIO[Environment & (ZIOAppArgs & Scope), Any, Any] =
     val app = new HelloApp
 
-    // For this simple example, we demonstrate the MVU structure
-    // without a full terminal loop. In a production app, you would
-    // integrate with TerminalService or use a full TUI loop.
+    // Demonstrate the pattern by executing the MVU cycle manually
     for
+      _                 <- Console.printLine("\n" + "=" * 60)
+      _                 <- Console.printLine("  HelloTUIApp - ZTuiApp Pattern Demonstration")
+      _                 <- Console.printLine("=" * 60)
       (initialState, _) <- app.init
-      view              <- ZIO.succeed(app.view(initialState))
-      _                 <- Console.printLine(view.render)
-      _                 <- Console.printLine("\nNote: This is a demonstration of ZTuiApp structure.")
-      _                 <- Console.printLine("In a full TUI app, keyboard input would be handled via subscriptions.")
+      _                 <- Console.printLine(s"\n📋 Initial State: $initialState")
+      view1              = app.view(initialState)
+      _                 <- Console.printLine(s"\n🎨 Initial View:\n${view1.render}")
+      // Simulate message handling
+      (state2, _)       <- app.update(Increment, initialState)
+      _                 <- Console.printLine(s"\n➡️  After Increment: $state2")
+      (state3, _)       <- app.update(Increment, state2)
+      _                 <- Console.printLine(s"➡️  After Increment: $state3")
+      (state4, _)       <- app.update(Decrement, state3)
+      _                 <- Console.printLine(s"➡️  After Decrement: $state4")
+      view2              = app.view(state4)
+      _                 <- Console.printLine(s"\n🎨 Final View:\n${view2.render}")
+      _                 <- Console.printLine("\n" + "=" * 60)
+      _                 <- Console.printLine("✨ Pattern demonstration complete!")
+      _                 <- Console.printLine("\nThis example shows the ZTuiApp structure.")
+      _                 <- Console.printLine("For fully interactive TUI, see DataDashboardApp.")
+      _                 <- Console.printLine("=" * 60 + "\n")
     yield 0
