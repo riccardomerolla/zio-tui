@@ -59,6 +59,16 @@ Available subscriptions:
 - `ZSub.watchFile(path)` - Monitor file changes
 - `ZSub.merge(subs*)` - Combine multiple subscriptions
 
+## Examples
+
+### Service Patterns
+
+The library includes comprehensive examples demonstrating ZIO service patterns:
+
+- **[DataSource](src/main/scala/io/github/riccardomerolla/zio/tui/example/DataSource.scala)** - Example service showing the complete service pattern with trait, Live/Test implementations, accessor methods, and layer constructors
+- **[DataDashboardApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/DataDashboardApp.scala)** - Multi-service composition example demonstrating horizontal (`++`) and vertical (`>>>`) layer composition
+- **[SERVICE-PATTERNS.md](docs/SERVICE-PATTERNS.md)** - Comprehensive guide to ZIO service patterns with best practices, common mistakes, and real-world examples
+
 ## Architecture
 
 zio-tui follows effect-oriented programming principles:
