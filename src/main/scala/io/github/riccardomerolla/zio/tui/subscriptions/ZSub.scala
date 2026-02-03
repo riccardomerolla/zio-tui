@@ -153,7 +153,7 @@ object ZSub:
               (terminal, terminal.reader())
             }
           )(release = { case (terminal, _) =>
-            ZIO.succeed(terminal.close()).ignore
+            ZIO.attemptBlocking(terminal.close()).ignore
           })
           .map { case (terminal, reader) =>
             ZStream
