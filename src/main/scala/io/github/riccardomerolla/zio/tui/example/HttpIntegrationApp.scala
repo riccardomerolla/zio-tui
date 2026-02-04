@@ -74,12 +74,12 @@ object HttpIntegrationApp extends ZIOAppDefault:
       // Display in a table widget
       widget   <- ZIO.succeed(
                     Widget.table(
-                      Seq("Property", "Value"),
+                      Seq("Property", "Value").map(layoutz.Text(_)),
                       Seq(
                         Seq("Status", response.status.toString),
                         Seq("Success", response.isSuccess.toString),
                         Seq("Body Length", s"${response.body.length} bytes"),
-                      ),
+                      ).map(_.map(layoutz.Text(_))),
                     )
                   )
       result   <- TerminalService.render(widget)

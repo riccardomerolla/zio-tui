@@ -59,12 +59,12 @@ object HelloTUIApp extends ZIOAppDefault:
       _      <- TerminalService.println("\n=== Table Widget Demo ===")
       widget <- ZIO.succeed(
                   Widget.table(
-                    Seq("Service", "Status", "Uptime"),
+                    Seq("Service", "Status", "Uptime").map(layoutz.Text(_)),
                     Seq(
                       Seq("API", "✓ Running", "99.9%"),
                       Seq("Database", "✓ Running", "99.8%"),
                       Seq("Cache", "✓ Running", "100%"),
-                    ),
+                    ).map(_.map(layoutz.Text(_))),
                   )
                 )
       result <- TerminalService.render(widget)

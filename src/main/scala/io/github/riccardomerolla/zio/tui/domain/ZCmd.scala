@@ -22,7 +22,7 @@ import zio.*
   * @tparam Msg
   *   The message type produced by the command
   */
-sealed trait ZCmd[+R, +E, +Msg]:
+sealed trait ZCmd[-R, +E, +Msg]:
 
   /** Batch this command with another.
     *
@@ -31,7 +31,7 @@ sealed trait ZCmd[+R, +E, +Msg]:
     * @return
     *   A batch command containing both commands
     */
-  def ++[R2 >: R, E2 >: E, Msg2 >: Msg](other: ZCmd[R2, E2, Msg2]): ZCmd[R2, E2, Msg2] =
+  def ++[R2 <: R, E2 >: E, Msg2 >: Msg](other: ZCmd[R2, E2, Msg2]): ZCmd[R2, E2, Msg2] =
     ZCmd.batch(this, other)
 
 object ZCmd:
@@ -128,8 +128,8 @@ object ZCmd:
       case _    => true
     }.toList
     filtered.length match
-      case 0 => None.asInstanceOf[ZCmd[R, E, Msg]]
-      case 1 => filtered.head
+      case 0 => None
+      case 1 => filtered.head.asInstanceOf[ZCmd[R, E, Msg]]
       case _ => Batch(filtered)
 
   /** Create an exit command.

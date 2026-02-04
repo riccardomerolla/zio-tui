@@ -43,7 +43,7 @@ object Widget:
   def list(items: String*): Widget =
     Widget(layoutz.ul(items.map(layoutz.Text(_))*))
 
-  /** Create a table widget.
+  /** Create a table widget with ANSI-aware layout.
     *
     * @param headers
     *   Column headers
@@ -52,11 +52,49 @@ object Widget:
     * @return
     *   A Widget wrapping the table
     */
-  def table(headers: Seq[String], rows: Seq[Seq[String]]): Widget =
-    Widget(layoutz.table(
-      headers.map(layoutz.Text(_)),
-      rows.map(row => row.map(layoutz.Text(_))),
-    ))
+  def table(headers: Seq[layoutz.Element], rows: Seq[Seq[layoutz.Element]]): Widget =
+    // Render everything to strings first
+    val renderedHeaders = headers.map(_.render)
+    val renderedRows    = rows.map(_.map(_.render))
+
+    // Helper to calculate visual length (stripping ANSI)
+    def visualLength(s: String): Int =
+      s.replaceAll("\u001b\\[[0-9;]*m", "").length
+
+    // Calculate column widths based on visual length
+    val colWidths = renderedHeaders.indices.map { i =>
+      val headerLen = visualLength(renderedHeaders(i))
+      val rowsLen   = if renderedRows.nonEmpty then renderedRows.map(r => visualLength(r(i))).max else 0
+      math.max(headerLen, rowsLen)
+    }
+
+    // Helper to pad cell content
+    def renderRow(cells: Seq[String]): String =
+      cells.zipWithIndex.map {
+        case (cell, i) =>
+          val width   = colWidths(i)
+          val visLen  = visualLength(cell)
+          val padding = " " * (width - visLen)
+          // Add 1 space padding around content
+          s" $cell$padding "
+      }.mkString("│", "│", "│")
+
+    // Construct the table
+    val topBorder    = "┌" + colWidths.map(w => "─" * (w + 2)).mkString("┬") + "┐"
+    val separator    = "├" + colWidths.map(w => "─" * (w + 2)).mkString("┼") + "┤"
+    val bottomBorder = "└" + colWidths.map(w => "─" * (w + 2)).mkString("┴") + "┘"
+
+    val headerStr = renderRow(renderedHeaders)
+    val rowsStr   = renderedRows.map(renderRow).mkString("\n")
+
+    val finalTable =
+      s"""$topBorder
+         |$headerStr
+         |$separator
+         |$rowsStr
+         |$bottomBorder""".stripMargin
+
+    Widget(layoutz.Text(finalTable))
 
 /** Result of a rendering operation.
   *

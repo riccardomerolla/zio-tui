@@ -191,6 +191,25 @@ object HttpService:
   def delete(url: String, headers: Map[String, String] = Map.empty): ZIO[HttpService, HttpError, HttpResponse] =
     ZIO.serviceWithZIO[HttpService](_.delete(url, headers))
 
+  /** Access HttpService and poll a URL periodically.
+    *
+    * @param url
+    *   The URL to poll
+    * @param schedule
+    *   ZIO Schedule controlling the polling behavior
+    * @param parse
+    *   Function to transform the HttpResponse into desired type A
+    * @return
+    *   A ZStream requiring HttpService that emits parsed values
+    */
+  def poll[A](
+    url: String,
+    schedule: Schedule[Any, Any, Any],
+  )(
+    parse: HttpResponse => A
+  ): ZStream[HttpService, HttpError, A] =
+    ZStream.serviceWithStream(_.poll(url, schedule)(parse))
+
   /** Live ZLayer for HttpService with default HTTP client.
     */
   val live: ZLayer[Any, Throwable, HttpService] =
