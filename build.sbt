@@ -54,11 +54,18 @@ lazy val root = (project in file("."))
     coverageFailOnMinimum := true,
     coverageHighlighting := true,
     // Enable forking and stdin connection for interactive TUI apps
-    run / fork := true,
-    run / connectInput := true,
+    // run / fork := true,
+    // run / connectInput := true,
     // Enable native access for JLine3 terminal
     run / javaOptions ++= Seq(
       "--enable-native-access=ALL-UNNAMED",
       "--add-opens", "java.base/java.lang=ALL-UNNAMED"
     ),
+    assembly / mainClass := Some("io.github.riccardomerolla.zio.tui.example.CounterApp"),
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*)       => MergeStrategy.first
+      case PathList("module-info.class")       => MergeStrategy.first
+      case x                                   => MergeStrategy.first
+    },
   )

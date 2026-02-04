@@ -76,10 +76,21 @@ A minimal example demonstrating The Elm Architecture pattern:
 - **[CounterApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/CounterApp.scala)** - Counter demonstrating Model-View-Update pattern, state management, keyboard subscriptions, and pure view rendering in under 50 lines
 - **[CounterAppSpec](src/test/scala/io/github/riccardomerolla/zio/tui/example/CounterAppSpec.scala)** - Comprehensive tests showing how to test ZTuiApp components
 
-Run the demo to see The Elm Architecture in action:
+Run the interactive counter demo:
+
+**Option 1: Standalone JAR (recommended for full terminal support)**
+```bash
+sbt assembly
+java --enable-native-access=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED \
+  -jar target/scala-3.5.2/zio-tui-assembly-*.jar
+```
+
+**Option 2: Through sbt (limited terminal support)**
 ```bash
 sbt "runMain io.github.riccardomerolla.zio.tui.example.CounterApp"
 ```
+
+Note: For immediate keypress response without requiring Enter, use the standalone JAR option. Running through sbt has limited terminal control capabilities.
 
 Study this example to understand how to structure interactive TUI applications with The Elm Architecture.
 
