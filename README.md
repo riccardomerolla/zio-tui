@@ -69,6 +69,31 @@ The library includes comprehensive examples demonstrating ZIO service patterns:
 - **[DataDashboardApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/DataDashboardApp.scala)** - Multi-service composition example demonstrating horizontal (`++`) and vertical (`>>>`) layer composition
 - **[SERVICE-PATTERNS.md](docs/SERVICE-PATTERNS.md)** - Comprehensive guide to ZIO service patterns with best practices, common mistakes, and real-world examples
 
+### Counter Application
+
+A minimal example demonstrating The Elm Architecture pattern:
+
+- **[CounterApp](src/main/scala/io/github/riccardomerolla/zio/tui/example/CounterApp.scala)** - Counter demonstrating Model-View-Update pattern, state management, keyboard subscriptions, and pure view rendering in under 50 lines
+- **[CounterAppSpec](src/test/scala/io/github/riccardomerolla/zio/tui/example/CounterAppSpec.scala)** - Comprehensive tests showing how to test ZTuiApp components
+
+Run the interactive counter demo:
+
+**Option 1: Standalone JAR**
+```bash
+sbt assembly
+java --enable-native-access=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED \
+  -jar target/scala-3.5.2/zio-tui-assembly-*.jar
+```
+
+**Option 2: Through sbt**
+```bash
+sbt "runMain io.github.riccardomerolla.zio.tui.example.CounterApp"
+```
+
+**Note on Keyboard Input:** The CounterApp requires a real terminal (TTY) for immediate keypress response. If you're running in an IDE console, piped input, or non-TTY environment, JLine3 will fall back to line-buffered input (requiring Enter after each key). For the best interactive experience, run the application in an actual terminal emulator (Terminal.app, iTerm2, Alacritty, etc.).
+
+Study this example to understand how to structure interactive TUI applications with The Elm Architecture.
+
 ## Architecture
 
 zio-tui follows effect-oriented programming principles:

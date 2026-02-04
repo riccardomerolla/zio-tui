@@ -57,8 +57,8 @@ object DataDashboardAppSpec extends ZIOSpecDefault:
             dataSource <- ZIO.service[DataSource]
             terminal   <- ZIO.service[TerminalService]
           yield assertTrue(
-            dataSource != null,
-            terminal != null,
+            dataSource.isInstanceOf[DataSource],
+            terminal.isInstanceOf[TerminalService],
           )
 
         program.provide(DataDashboardApp.appLayer)
@@ -80,15 +80,15 @@ object DataDashboardAppSpec extends ZIOSpecDefault:
     suite("layer composition patterns")(
       test("horizontal composition with ++ combines independent services") {
         // Demonstrate that ++ combines services that don't depend on each other
-        val composed = DataSource.test() ++ TerminalService.test()
+        val composed                                              = DataSource.test() ++ TerminalService.test()
         val _: ZLayer[Any, Nothing, DataSource & TerminalService] = composed
 
         assertTrue(true)
       },
       test("composed layer can be provided to program requiring both services") {
-        val point1     = DataPoint(timestamp = 1000L, value = 50.0, label = "Load")
-        val point2     = DataPoint(timestamp = 2000L, value = 75.0, label = "Network")
-        val testLayer  = DataSource.test(point1, point2) ++ TerminalService.test()
+        val point1    = DataPoint(timestamp = 1000L, value = 50.0, label = "Load")
+        val point2    = DataPoint(timestamp = 2000L, value = 75.0, label = "Network")
+        val testLayer = DataSource.test(point1, point2) ++ TerminalService.test()
 
         val program: ZIO[DataSource & TerminalService, DataSourceError | TUIError, Chunk[DataPoint]] =
           for

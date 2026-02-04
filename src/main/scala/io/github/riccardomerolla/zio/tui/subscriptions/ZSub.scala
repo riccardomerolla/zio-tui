@@ -117,3 +117,97 @@ object ZSub:
         }
         .collectSome
     }
+
+  /** Subscribe to keyboard input events.
+    *
+    * Reads keyboard input from stdin using JLine3's NonBlockingReader in raw mode. The handler function maps Key events
+    * to application messages, returning Some(msg) to emit a message or None to ignore the key.
+    *
+    * This is particularly useful for interactive TUI applications that need to respond to keyboard input. The stream
+    * runs continuously until interrupted and automatically handles terminal cleanup.
+    *
+    * **Important:** This requires running in an actual terminal (TTY). If stdin is not a TTY (e.g., piped input, IDE
+    * console), JLine3 will fall back to line-buffered input requiring Enter after each keypress. For best results, run
+    * the application in a real terminal session.
+    *
+    * @param handler
+    *   Function that maps Key events to optional messages
+    * @return
+    *   A stream that emits messages based on keyboard input
+    *
+    * @example
+    *   {{{
+    * def subscriptions(state: State): ZStream[Any, Nothing, Msg] =
+    *   ZSub.keyPress {
+    *     case Key.Character('q') => Some(Msg.Quit)
+    *     case Key.Character('+') => Some(Msg.Increment)
+    *     case Key.Character('-') => Some(Msg.Decrement)
+    *     case _                  => None
+    *   }
+    *   }}}
+    */
+  def keyPress[Msg](handler: Key => Option[Msg]): ZStream[Any, Nothing, Msg] =
+    ZStream.unwrap {
+      ZIO.scoped {
+        ZIO
+          .acquireRelease(
+            acquire = ZIO.attemptBlocking {
+              val terminal = org.jline.terminal.TerminalBuilder
+                .builder()
+                .system(true)
+                .jna(true)
+                .build()
+
+              // Check if we got a real terminal
+              val isDumb = terminal.getType == "dumb"
+              if isDumb then
+                java.lang.System.err.println(
+                  "\nWARNING: Running in dumb terminal mode. Keyboard input will require pressing Enter.\n" +
+                    "For immediate keypress response, run in a real terminal (not through IDE/piped input).\n"
+                )
+
+              // Save original attributes
+              val originalAttrs = terminal.getAttributes()
+
+              // Configure terminal for raw character input (only effective if not dumb)
+              val attrs = new org.jline.terminal.Attributes(originalAttrs)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ICANON, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ECHO, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.IEXTEN, false)
+              attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ISIG, false)
+              attrs.setInputFlag(org.jline.terminal.Attributes.InputFlag.ICRNL, false)
+              attrs.setControlChar(org.jline.terminal.Attributes.ControlChar.VMIN, 1)
+              attrs.setControlChar(org.jline.terminal.Attributes.ControlChar.VTIME, 0)
+              terminal.setAttributes(attrs)
+
+              (terminal, terminal.reader(), originalAttrs, isDumb)
+            }
+          )(release = {
+            case (terminal, _, originalAttrs, _) =>
+              ZIO.attemptBlocking {
+                terminal.setAttributes(originalAttrs)
+                terminal.close()
+              }.ignore
+          })
+          .map {
+            case (terminal, reader, _, isDumb) =>
+              ZStream
+                .repeatZIO {
+                  ZIO.attemptBlocking {
+                    val char = reader.read()
+                    if char == -1 then None
+                    else
+                      val key = char.toChar match
+                        case '\n' | '\r'       => Key.Enter
+                        case '\u001b'          => Key.Escape
+                        case '\u007f'          => Key.Backspace
+                        case '\t'              => Key.Tab
+                        case c if c.toInt < 32 => Key.Control((c.toInt + 96).toChar)
+                        case c                 => Key.Character(c)
+                      handler(key)
+                  }.catchAll(_ => ZIO.succeed(None))
+                }
+                .collectSome
+          }
+      }.catchAll(_ => ZIO.succeed(ZStream.empty))
+    }
