@@ -126,6 +126,10 @@ object ZSub:
     * This is particularly useful for interactive TUI applications that need to respond to keyboard input. The stream
     * runs continuously until interrupted and automatically handles terminal cleanup.
     *
+    * **Important:** This requires running in an actual terminal (TTY). If stdin is not a TTY (e.g., piped input, IDE
+    * console), JLine3 will fall back to line-buffered input requiring Enter after each keypress. For best results, run
+    * the application in a real terminal session.
+    *
     * @param handler
     *   Function that maps Key events to optional messages
     * @return
@@ -154,10 +158,18 @@ object ZSub:
                 .jna(true)
                 .build()
 
+              // Check if we got a real terminal
+              val isDumb = terminal.getType == "dumb"
+              if isDumb then
+                java.lang.System.err.println(
+                  "\nWARNING: Running in dumb terminal mode. Keyboard input will require pressing Enter.\n" +
+                    "For immediate keypress response, run in a real terminal (not through IDE/piped input).\n"
+                )
+
               // Save original attributes
               val originalAttrs = terminal.getAttributes()
 
-              // Configure terminal for raw character input
+              // Configure terminal for raw character input (only effective if not dumb)
               val attrs = new org.jline.terminal.Attributes(originalAttrs)
               attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ICANON, false)
               attrs.setLocalFlag(org.jline.terminal.Attributes.LocalFlag.ECHO, false)
@@ -168,17 +180,17 @@ object ZSub:
               attrs.setControlChar(org.jline.terminal.Attributes.ControlChar.VTIME, 0)
               terminal.setAttributes(attrs)
 
-              (terminal, terminal.reader(), originalAttrs)
+              (terminal, terminal.reader(), originalAttrs, isDumb)
             }
           )(release = {
-            case (terminal, _, originalAttrs) =>
+            case (terminal, _, originalAttrs, _) =>
               ZIO.attemptBlocking {
                 terminal.setAttributes(originalAttrs)
                 terminal.close()
               }.ignore
           })
           .map {
-            case (terminal, reader, _) =>
+            case (terminal, reader, _, isDumb) =>
               ZStream
                 .repeatZIO {
                   ZIO.attemptBlocking {
