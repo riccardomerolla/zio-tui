@@ -97,7 +97,10 @@ object HttpIntegrationApp extends ZIOAppDefault:
                .poll(
                  url = "https://httpbin.org/uuid",
                  schedule = Schedule.spaced(2.seconds),
-               )(response => s"[${java.time.LocalTime.now}] Status: ${response.status}")
+               )(identity)
+               .mapZIO { response =>
+                 Clock.instant.map(time => s"[$time] Status: ${response.status}")
+               }
                .take(3)
                .foreach(msg => TerminalService.println(msg))
            )
@@ -144,10 +147,9 @@ object HttpIntegrationApp extends ZIOAppDefault:
   /** Application entry point with dependency injection. */
   def run: ZIO[Environment & (ZIOAppArgs & Scope), Any, Any] =
     program
-      .provide(
-        TerminalService.live,
-        HttpService.live,
-        zio.http.Client.default,
+      .provideLayer(
+        TerminalService.live ++
+          (zio.http.Client.default >>> (HttpService.liveWithClient ++ ZLayer.service[zio.http.Client]))
       )
       .catchAll { error =>
         ZIO.logError(s"Application failed with error: $error") *>
