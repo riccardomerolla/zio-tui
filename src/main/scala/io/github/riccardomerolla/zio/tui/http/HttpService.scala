@@ -210,10 +210,14 @@ object HttpService:
   ): ZStream[HttpService, HttpError, A] =
     ZStream.serviceWithStream(_.poll(url, schedule)(parse))
 
+  /** Live ZLayer for HttpService using an existing HTTP client. */
+  val liveWithClient: ZLayer[Client, Nothing, HttpService] =
+    ZLayer.fromFunction(HttpServiceLive.apply)
+
   /** Live ZLayer for HttpService with default HTTP client.
     */
   val live: ZLayer[Any, Throwable, HttpService] =
-    Client.default >>> ZLayer.fromFunction(HttpServiceLive.apply)
+    Client.default >>> liveWithClient
 
   /** Test/mock implementation returning predefined responses.
     *

@@ -62,11 +62,11 @@ object WidgetSpec extends ZIOSpecDefault:
     suite("table widget")(
       test("creates table with headers and rows") {
         val widget   = Widget.table(
-          Seq("Col1", "Col2").map(layoutz.Text(_)),
+          Seq("Col1", "Col2"),
           Seq(
             Seq("A", "B"),
             Seq("C", "D"),
-          ).map(_.map(layoutz.Text(_))),
+          ),
         )
         val rendered = widget.render
         assertTrue(

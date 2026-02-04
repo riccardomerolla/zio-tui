@@ -163,11 +163,11 @@ object TerminalServiceSpec extends ZIOSpecDefault:
       test("renders table widget with headers and rows") {
         for
           widget <- ZIO.succeed(Widget.table(
-                      Seq("Name", "Age").map(layoutz.Text(_)),
+                      Seq("Name", "Age"),
                       Seq(
                         Seq("Alice", "30"),
                         Seq("Bob", "25"),
-                      ).map(_.map(layoutz.Text(_))),
+                      ),
                     ))
           result <- TerminalService.render(widget)
         yield assertTrue(

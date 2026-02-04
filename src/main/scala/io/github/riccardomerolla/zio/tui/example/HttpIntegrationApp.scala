@@ -74,12 +74,12 @@ object HttpIntegrationApp extends ZIOAppDefault:
       // Display in a table widget
       widget   <- ZIO.succeed(
                     Widget.table(
-                      Seq("Property", "Value").map(layoutz.Text(_)),
+                      Seq("Property", "Value"),
                       Seq(
                         Seq("Status", response.status.toString),
                         Seq("Success", response.isSuccess.toString),
                         Seq("Body Length", s"${response.body.length} bytes"),
-                      ).map(_.map(layoutz.Text(_))),
+                      ),
                     )
                   )
       result   <- TerminalService.render(widget)
@@ -97,7 +97,10 @@ object HttpIntegrationApp extends ZIOAppDefault:
                .poll(
                  url = "https://httpbin.org/uuid",
                  schedule = Schedule.spaced(2.seconds),
-               )(response => s"[${java.time.LocalTime.now}] Status: ${response.status}")
+               )(identity)
+               .mapZIO { response =>
+                 Clock.instant.map(time => s"[$time] Status: ${response.status}")
+               }
                .take(3)
                .foreach(msg => TerminalService.println(msg))
            )
@@ -144,10 +147,9 @@ object HttpIntegrationApp extends ZIOAppDefault:
   /** Application entry point with dependency injection. */
   def run: ZIO[Environment & (ZIOAppArgs & Scope), Any, Any] =
     program
-      .provide(
-        TerminalService.live,
-        HttpService.live,
-        zio.http.Client.default,
+      .provideLayer(
+        TerminalService.live ++
+          (zio.http.Client.default >>> (HttpService.liveWithClient ++ ZLayer.service[zio.http.Client]))
       )
       .catchAll { error =>
         ZIO.logError(s"Application failed with error: $error") *>

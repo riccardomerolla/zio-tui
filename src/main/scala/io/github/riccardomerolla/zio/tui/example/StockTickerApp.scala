@@ -54,8 +54,10 @@ object StockTickerApp extends ZIOAppDefault:
   type AppEnv = HttpService & Client
 
   class TickerApp extends ZTuiApp[AppEnv, HttpError, StockState, StockMsg]:
-    private val symbols = List("BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "DOTUSDT")
-    private val apiUrl  = "https://api.binance.com/api/v3/ticker/price"
+    private val symbols       = List("BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "DOTUSDT")
+    private val apiUrl        = "https://api.binance.com/api/v3/ticker/price"
+    private val symbolRegexes =
+      symbols.map(sym => sym -> s""""symbol":"$sym","price":"([0-9.]+)"""".r).toMap
 
     def init: ZIO[AppEnv, HttpError, (StockState, ZCmd[AppEnv, HttpError, StockMsg])] =
       ZIO.succeed((StockState(Map.empty), ZCmd.none))
@@ -82,10 +84,12 @@ object StockTickerApp extends ZIOAppDefault:
     def subscriptions(state: StockState): ZStream[AppEnv, HttpError, StockMsg] =
       val pollStream = HttpService
         .poll(apiUrl, Schedule.spaced(5.seconds)) { response =>
-          val prices = symbols.flatMap { sym =>
-            val regex = s""""symbol":"$sym","price":"([0-9.]+)"""".r
-            regex.findFirstMatchIn(response.body).map(m => sym -> m.group(1).toDouble)
-          }.toMap
+          val prices = symbolRegexes.flatMap {
+            case (sym, regex) =>
+              regex
+                .findFirstMatchIn(response.body)
+                .flatMap(m => m.group(1).toDoubleOption.map(sym -> _))
+          }
           StockMsg.UpdatePrices(prices)
         }
         .catchAll(err => ZStream.succeed(StockMsg.FetchError(err.toString)))
@@ -137,29 +141,33 @@ object StockTickerApp extends ZIOAppDefault:
         _ <- Console.printLine(app.view(state).render).orDie
       yield ()
 
-    for
+    val appLayer: ZLayer[Any, Throwable, AppEnv] =
+      Client.default >>> (HttpService.liveWithClient ++ ZLayer.service[Client])
+
+    (for
       _                 <- Console.printLine("Starting Stock Ticker...").orDie
       app               <- ZIO.succeed(new TickerApp)
-      (initialState, _) <- app.init.provide(HttpService.live, Client.default)
+      (initialState, _) <- app.init
       _                 <- clearScreen
       _                 <- renderView(initialState, app)
       stateRef          <- Ref.make(initialState)
       _                 <- app
                              .subscriptions(initialState)
+                             .takeUntil(_ == StockMsg.Quit)
                              .foreach { msg =>
                                msg match
                                  case StockMsg.Quit =>
-                                   ZIO.interrupt
+                                   ZIO.unit
                                  case _             =>
                                    for
                                      currentState  <- stateRef.get
-                                     (newState, _) <- app.update(msg, currentState).provide(HttpService.live, Client.default)
+                                     (newState, _) <- app.update(msg, currentState)
                                      _             <- stateRef.set(newState)
                                      _             <- renderView(newState, app)
                                    yield ()
                              }
-                             .provide(HttpService.live, Client.default)
-                             .catchAllCause(_ => ZIO.unit)
+                             .catchAllCause(cause => ZIO.logErrorCause("Stock ticker stream failed", cause))
       _                 <- clearScreen
       _                 <- Console.printLine("Ticker stopped.").orDie
-    yield ()
+    yield ())
+      .provideLayer(appLayer)

@@ -1,5 +1,7 @@
 package io.github.riccardomerolla.zio.tui.domain
 
+import scala.annotation.targetName
+
 import layoutz.{ Element, stringToText }
 
 /** A ZIO-wrapped widget ready for rendering.
@@ -11,6 +13,8 @@ final case class Widget(element: Element):
   def render: String = element.render
 
 object Widget:
+  private val ansiPattern = "\u001b\\[[0-9;]*m".r
+
   /** Create a text widget from a string.
     *
     * @param text
@@ -52,6 +56,7 @@ object Widget:
     * @return
     *   A Widget wrapping the table
     */
+  @targetName("tableElements")
   def table(headers: Seq[layoutz.Element], rows: Seq[Seq[layoutz.Element]]): Widget =
     // Render everything to strings first
     val renderedHeaders = headers.map(_.render)
@@ -59,42 +64,70 @@ object Widget:
 
     // Helper to calculate visual length (stripping ANSI)
     def visualLength(s: String): Int =
-      s.replaceAll("\u001b\\[[0-9;]*m", "").length
+      ansiPattern.replaceAllIn(s, "").length
 
-    // Calculate column widths based on visual length
-    val colWidths = renderedHeaders.indices.map { i =>
-      val headerLen = visualLength(renderedHeaders(i))
-      val rowsLen   = if renderedRows.nonEmpty then renderedRows.map(r => visualLength(r(i))).max else 0
-      math.max(headerLen, rowsLen)
-    }
+    val columnCount =
+      (renderedHeaders.length +: renderedRows.map(_.length)).maxOption.getOrElse(0)
 
-    // Helper to pad cell content
-    def renderRow(cells: Seq[String]): String =
-      cells.zipWithIndex.map {
-        case (cell, i) =>
-          val width   = colWidths(i)
-          val visLen  = visualLength(cell)
-          val padding = " " * (width - visLen)
-          // Add 1 space padding around content
-          s" $cell$padding "
-      }.mkString("│", "│", "│")
+    if columnCount == 0 then
+      Widget(layoutz.Text(""))
+    else
+      val normalizedHeaders = (0 until columnCount).map(i => renderedHeaders.lift(i).getOrElse(""))
+      val normalizedRows    = renderedRows.map { row =>
+        (0 until columnCount).map(i => row.lift(i).getOrElse(""))
+      }
 
-    // Construct the table
-    val topBorder    = "┌" + colWidths.map(w => "─" * (w + 2)).mkString("┬") + "┐"
-    val separator    = "├" + colWidths.map(w => "─" * (w + 2)).mkString("┼") + "┤"
-    val bottomBorder = "└" + colWidths.map(w => "─" * (w + 2)).mkString("┴") + "┘"
+      // Calculate column widths based on visual length
+      val colWidths = (0 until columnCount).map { i =>
+        val headerLen = visualLength(normalizedHeaders(i))
+        val rowsLen   =
+          if normalizedRows.nonEmpty then normalizedRows.map(r => visualLength(r(i))).max else 0
+        math.max(headerLen, rowsLen)
+      }
 
-    val headerStr = renderRow(renderedHeaders)
-    val rowsStr   = renderedRows.map(renderRow).mkString("\n")
+      // Helper to pad cell content
+      def renderRow(cells: Seq[String]): String =
+        cells.zipWithIndex.map {
+          case (cell, i) =>
+            val width   = colWidths(i)
+            val visLen  = visualLength(cell)
+            val padding = " " * (width - visLen)
+            // Add 1 space padding around content
+            s" $cell$padding "
+        }.mkString("│", "│", "│")
 
-    val finalTable =
-      s"""$topBorder
-         |$headerStr
-         |$separator
-         |$rowsStr
-         |$bottomBorder""".stripMargin
+      // Construct the table
+      val topBorder    = "┌" + colWidths.map(w => "─" * (w + 2)).mkString("┬") + "┐"
+      val separator    = "├" + colWidths.map(w => "─" * (w + 2)).mkString("┼") + "┤"
+      val bottomBorder = "└" + colWidths.map(w => "─" * (w + 2)).mkString("┴") + "┘"
 
-    Widget(layoutz.Text(finalTable))
+      val headerStr = renderRow(normalizedHeaders)
+      val rowsStr   = normalizedRows.map(renderRow).mkString("\n")
+
+      val finalTable =
+        s"""$topBorder
+           |$headerStr
+           |$separator
+           |$rowsStr
+           |$bottomBorder""".stripMargin
+
+      Widget(layoutz.Text(finalTable))
+
+  /** Create a table widget from plain strings (convenience overload).
+    *
+    * @param headers
+    *   Column headers
+    * @param rows
+    *   Table rows
+    * @return
+    *   A Widget wrapping the table
+    */
+  @targetName("tableStrings")
+  def table(headers: Seq[String], rows: Seq[Seq[String]]): Widget =
+    table(
+      headers.map(layoutz.Text(_)),
+      rows.map(_.map(layoutz.Text(_))),
+    )
 
 /** Result of a rendering operation.
   *
